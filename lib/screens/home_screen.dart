@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'setting_screen.dart';
+import 'rincian_screen.dart';
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
 
@@ -395,17 +396,33 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 10),
 
           // Rincian
-          Align(
-            alignment: Alignment.centerRight,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Rincian', style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.6))),
-                const SizedBox(width: 3),
-                Icon(Icons.chevron_right, size: 14, color: Colors.white.withOpacity(0.4)),
-              ],
-            ),
-          ),
+          // SESUDAH
+GestureDetector(
+  onTap: () => Navigator.push(
+    context,
+    PageRouteBuilder(
+      pageBuilder: (_, __, ___) => const RincianScreen(),
+      transitionsBuilder: (_, anim, __, child) => SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(1, 0),
+          end: Offset.zero,
+        ).animate(anim),
+        child: child,
+      ),
+    ),
+  ),
+  child: Align(
+    alignment: Alignment.centerRight,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('Rincian', style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.6))),
+        const SizedBox(width: 3),
+        Icon(Icons.chevron_right, size: 14, color: Colors.white.withOpacity(0.4)),
+      ],
+    ),
+  ),
+),
         ],
       ),
     );
