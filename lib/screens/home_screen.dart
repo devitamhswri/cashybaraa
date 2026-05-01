@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'setting_screen.dart';
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
 
@@ -337,14 +338,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              Container(
-                width: 30, height: 30,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.settings_outlined, size: 15, color: Colors.white.withOpacity(0.8)),
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingScreen()),
+            ),
+            child: Container(
+              width: 30, height: 30,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
+              child: Icon(Icons.settings_outlined, size: 15, color: Colors.white.withOpacity(0.8)),
+            ),
+          ),
             ],
           ),
           const SizedBox(height: 18),

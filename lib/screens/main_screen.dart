@@ -219,7 +219,8 @@ class _IconPainter extends CustomPainter {
 
     // Buku - cover depan
     final book = RRect.fromRectAndRadius(
-      Rect.fromLTWH(s.width * 0.1, s.height * 0.1, s.width * 0.72, s.height * 0.82),
+      Rect.fromLTWH(
+          s.width * 0.1, s.height * 0.1, s.width * 0.72, s.height * 0.82),
       const Radius.circular(3),
     );
     canvas.drawRRect(book, p);
@@ -262,8 +263,10 @@ class _IconPainter extends CustomPainter {
       ..color = color
       ..strokeWidth = 1.2
       ..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(s.width * 0.28, s.height * 0.68), Offset(s.width * 0.46, s.height * 0.68), linePaint);
-    canvas.drawLine(Offset(s.width * 0.28, s.height * 0.76), Offset(s.width * 0.46, s.height * 0.76), linePaint);
+    canvas.drawLine(Offset(s.width * 0.28, s.height * 0.68),
+        Offset(s.width * 0.46, s.height * 0.68), linePaint);
+    canvas.drawLine(Offset(s.width * 0.28, s.height * 0.76),
+        Offset(s.width * 0.46, s.height * 0.76), linePaint);
   }
 
   // ── TRANSAKSI: struk/nota dengan lingkaran $ ─────────────────────────────────
@@ -308,9 +311,14 @@ class _IconPainter extends CustomPainter {
     canvas.drawLine(Offset(cx, cy - 6.5), Offset(cx, cy + 6.5), dp);
 
     // Baris-baris struk
-    final lp = Paint()..color = color..strokeWidth = 1.1..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(s.width * 0.30, s.height * 0.67), Offset(s.width * 0.70, s.height * 0.67), lp);
-    canvas.drawLine(Offset(s.width * 0.30, s.height * 0.74), Offset(s.width * 0.58, s.height * 0.74), lp);
+    final lp = Paint()
+      ..color = color
+      ..strokeWidth = 1.1
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(s.width * 0.30, s.height * 0.67),
+        Offset(s.width * 0.70, s.height * 0.67), lp);
+    canvas.drawLine(Offset(s.width * 0.30, s.height * 0.74),
+        Offset(s.width * 0.58, s.height * 0.74), lp);
   }
 
   // ── STATISTIK: bar chart dengan panah naik ────────────────────────────────
@@ -319,12 +327,16 @@ class _IconPainter extends CustomPainter {
 
     // 3 bar
     final bars = [
-      Rect.fromLTWH(s.width * 0.12, s.height * 0.52, s.width * 0.18, s.height * 0.36),
-      Rect.fromLTWH(s.width * 0.38, s.height * 0.32, s.width * 0.18, s.height * 0.56),
-      Rect.fromLTWH(s.width * 0.64, s.height * 0.18, s.width * 0.18, s.height * 0.70),
+      Rect.fromLTWH(
+          s.width * 0.12, s.height * 0.52, s.width * 0.18, s.height * 0.36),
+      Rect.fromLTWH(
+          s.width * 0.38, s.height * 0.32, s.width * 0.18, s.height * 0.56),
+      Rect.fromLTWH(
+          s.width * 0.64, s.height * 0.18, s.width * 0.18, s.height * 0.70),
     ];
     for (final bar in bars) {
-      canvas.drawRRect(RRect.fromRectAndRadius(bar, const Radius.circular(3)), p);
+      canvas.drawRRect(
+          RRect.fromRectAndRadius(bar, const Radius.circular(3)), p);
     }
 
     // Panah naik di kanan atas
@@ -367,17 +379,21 @@ class _IconPainter extends CustomPainter {
 
     // Badan koin (silinder) — elips atas
     canvas.drawOval(
-      Rect.fromLTWH(s.width * 0.18, s.height * 0.28, s.width * 0.64, s.height * 0.22),
+      Rect.fromLTWH(
+          s.width * 0.18, s.height * 0.28, s.width * 0.64, s.height * 0.22),
       p,
     );
 
     // Sisi silinder
-    canvas.drawLine(Offset(s.width * 0.18, s.height * 0.39), Offset(s.width * 0.18, s.height * 0.72), p);
-    canvas.drawLine(Offset(s.width * 0.82, s.height * 0.39), Offset(s.width * 0.82, s.height * 0.72), p);
+    canvas.drawLine(Offset(s.width * 0.18, s.height * 0.39),
+        Offset(s.width * 0.18, s.height * 0.72), p);
+    canvas.drawLine(Offset(s.width * 0.82, s.height * 0.39),
+        Offset(s.width * 0.82, s.height * 0.72), p);
 
     // Elips bawah
     canvas.drawOval(
-      Rect.fromLTWH(s.width * 0.18, s.height * 0.61, s.width * 0.64, s.height * 0.22),
+      Rect.fromLTWH(
+          s.width * 0.18, s.height * 0.61, s.width * 0.64, s.height * 0.22),
       p,
     );
 
@@ -398,5 +414,6 @@ class _IconPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_IconPainter old) => old.color != color || old.icon != icon;
+  bool shouldRepaint(_IconPainter old) =>
+      old.color != color || old.icon != icon;
 }
