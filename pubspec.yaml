@@ -22,4 +22,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/image/cashybara-logo.svg
+
+    
     

@@ -5,9 +5,16 @@ import '../providers/transaction_provider.dart';
 class IncomeCard extends StatelessWidget {
   const IncomeCard({super.key});
 
+  String _formatRp(double amount) {
+    final s = amount.toInt().toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
+    return 'Rp $s';
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Kita pakai Consumer supaya kartu ini dengerin perubahan data di Provider
     return Consumer<TransactionProvider>(
       builder: (context, transProvider, child) {
         return Stack(
@@ -24,12 +31,12 @@ class IncomeCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Top Section: Total Saldo Keseluruhan
+                  // Total Saldo
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Rp ${transProvider.totalBalance.toInt()}', // AMBIL DARI PROVIDER
+                        _formatRp(transProvider.totalBalance),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
@@ -42,17 +49,13 @@ class IncomeCard extends StatelessWidget {
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white70, width: 1.5),
                         ),
-                        child: const Icon(
-                          Icons.add,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      )
+                        child: const Icon(Icons.add, color: Colors.white, size: 20),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  
-                  // Inner light container (Detail BCA & Tunai)
+
+                  // Inner container (BCA & Tunai)
                   Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFFC4B5AE),
@@ -62,12 +65,11 @@ class IncomeCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                     child: Column(
                       children: [
-                        // Row 1: BCA / Rekening
+                        // BCA
                         Row(
                           children: [
                             Container(
-                              width: 40,
-                              height: 40,
+                              width: 40, height: 40,
                               decoration: BoxDecoration(
                                 color: const Color(0xFF003B71),
                                 borderRadius: BorderRadius.circular(8),
@@ -88,33 +90,27 @@ class IncomeCard extends StatelessWidget {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Rekening',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF4A1B14),
-                                  ),
-                                ),
+                                const Text('Rekening',
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF4A1B14))),
                                 Text(
-                                  'Rp ${transProvider.bcaBalance.toInt()}', // AMBIL DARI PROVIDER
+                                  _formatRp(transProvider.bcaBalance),
                                   style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF4A1B14),
-                                  ),
+                                      fontSize: 14, color: Color(0xFF4A1B14)),
                                 ),
                               ],
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
-                        
-                        // Row 2: Cash / Uang Tunai
+
+                        // Uang Tunai
                         Row(
                           children: [
                             Container(
-                              width: 40,
-                              height: 40,
+                              width: 40, height: 40,
                               decoration: BoxDecoration(
                                 color: const Color(0xFF4CAF50),
                                 borderRadius: BorderRadius.circular(8),
@@ -128,20 +124,15 @@ class IncomeCard extends StatelessWidget {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Uang Tunai',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF4A1B14),
-                                  ),
-                                ),
+                                const Text('Uang Tunai',
+                                    style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF4A1B14))),
                                 Text(
-                                  'Rp ${transProvider.cashBalance.toInt()}', // AMBIL DARI PROVIDER
+                                  _formatRp(transProvider.cashBalance),
                                   style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Color(0xFF4A1B14),
-                                  ),
+                                      fontSize: 14, color: Color(0xFF4A1B14)),
                                 ),
                               ],
                             ),
@@ -153,8 +144,8 @@ class IncomeCard extends StatelessWidget {
                 ],
               ),
             ),
-            
-            // Overlapping Capybara Image
+
+            // Capybara image
             Positioned(
               top: -40,
               left: -20,
@@ -162,17 +153,14 @@ class IncomeCard extends StatelessWidget {
                 'assets/capybara_laying.png',
                 width: 120,
                 height: 120,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      color: Colors.brown,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.pets, color: Colors.white, size: 40),
-                  );
-                },
+                errorBuilder: (_, __, ___) => Container(
+                  width: 80, height: 80,
+                  decoration: const BoxDecoration(
+                    color: Colors.brown,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.pets, color: Colors.white, size: 40),
+                ),
               ),
             ),
           ],

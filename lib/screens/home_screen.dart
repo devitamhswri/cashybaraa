@@ -1,111 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'app_state.dart';
 import 'setting_screen.dart';
-
-// ── DATA ──────────────────────────────────────────────────────────────────────
-
-class Category {
-  final int id;
-  final String name;
-  final String icon;
-  final Color bg;
-  final Color color;
-  final int amount;
-  final int pct;
-
-  Category({
-    required this.id,
-    required this.name,
-    required this.icon,
-    required this.bg,
-    required this.color,
-    required this.amount,
-    required this.pct,
-  });
-
-  Category copyWith({String? name, String? icon, Color? bg, Color? color, int? amount, int? pct}) {
-    return Category(
-      id: id,
-      name: name ?? this.name,
-      icon: icon ?? this.icon,
-      bg: bg ?? this.bg,
-      color: color ?? this.color,
-      amount: amount ?? this.amount,
-      pct: pct ?? this.pct,
-    );
-  }
-}
-
-final List<Category> defaultCategories = [
-  Category(id: 1, name: "Makanan dan Minuman", icon: "🍔", bg: const Color(0xFFFFF3E0), color: const Color(0xFFF4A03A), amount: 325000, pct: 52),
-  Category(id: 2, name: "Transportasi",        icon: "🚗", bg: const Color(0xFFE3F2FD), color: const Color(0xFF42A5F5), amount: 176000, pct: 27),
-  Category(id: 3, name: "Biaya Utilitas",      icon: "🏠", bg: const Color(0xFFE8F5E9), color: const Color(0xFF66BB6A), amount: 89000,  pct: 14),
-  Category(id: 4, name: "Belanja",             icon: "🛍", bg: const Color(0xFFFCE4EC), color: const Color(0xFFEC407A), amount: 89000,  pct: 14),
-  Category(id: 5, name: "Kesehatan",           icon: "❤️", bg: const Color(0xFFFDF3E7), color: const Color(0xFFEF5350), amount: 62500,  pct: 10),
-  Category(id: 6, name: "Perawatan",           icon: "💆", bg: const Color(0xFFF3E5F5), color: const Color(0xFFAB47BC), amount: 0,      pct: 0),
-];
-
-const List<String> iconOptions = [
-  "🍔","🚗","🏠","🛍","❤️","💆","🎓","✈️","🎮","💡","🐶","📱","🎵","💪","🧴"
-];
-
-class ColorSchemeOption {
-  final Color bg;
-  final Color color;
-  const ColorSchemeOption(this.bg, this.color);
-}
-
-const List<ColorSchemeOption> bgOptions = [
-  ColorSchemeOption(Color(0xFFFFF3E0), Color(0xFFF4A03A)),
-  ColorSchemeOption(Color(0xFFE3F2FD), Color(0xFF42A5F5)),
-  ColorSchemeOption(Color(0xFFE8F5E9), Color(0xFF66BB6A)),
-  ColorSchemeOption(Color(0xFFFCE4EC), Color(0xFFEC407A)),
-  ColorSchemeOption(Color(0xFFFDF3E7), Color(0xFFEF5350)),
-  ColorSchemeOption(Color(0xFFF3E5F5), Color(0xFFAB47BC)),
-  ColorSchemeOption(Color(0xFFE8EAF6), Color(0xFF5C6BC0)),
-  ColorSchemeOption(Color(0xFFE0F7FA), Color(0xFF00ACC1)),
-];
-
-// ── HELPERS ───────────────────────────────────────────────────────────────────
-
-String formatRp(int num) {
-  final s = num.toString().replaceAllMapped(
-    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-    (m) => '${m[1]}.',
-  );
-  return 'Rp $s';
-}
+import 'category_input_screen.dart';
 
 const Color kBrown = Color(0xFF4A3728);
 const Color kBrownLight = Color(0xFF9E8F82);
 const Color kBg = Color(0xFFF5F0EA);
 
-// ── ADD MODAL ─────────────────────────────────────────────────────────────────
+// ── ADD CATEGORY MODAL ────────────────────────────────────────────────────────
 
-class AddModal extends StatefulWidget {
+class AddCategoryModal extends StatefulWidget {
   final VoidCallback onClose;
-  final void Function(Category) onAdd;
+  final void Function(CategoryData) onAdd;
 
-  const AddModal({super.key, required this.onClose, required this.onAdd});
+  const AddCategoryModal({super.key, required this.onClose, required this.onAdd});
 
   @override
-  State<AddModal> createState() => _AddModalState();
+  State<AddCategoryModal> createState() => _AddCategoryModalState();
 }
 
-class _AddModalState extends State<AddModal> {
+class _AddCategoryModalState extends State<AddCategoryModal> {
   final TextEditingController _nameController = TextEditingController();
   String _selectedIcon = iconOptions[0];
-  ColorSchemeOption _selectedScheme = bgOptions[0];
+  _ColorScheme _selectedScheme = colorSchemes[0];
 
   void _handleSubmit() {
     if (_nameController.text.trim().isEmpty) return;
-    widget.onAdd(Category(
+    widget.onAdd(CategoryData(
       id: DateTime.now().millisecondsSinceEpoch,
       name: _nameController.text.trim(),
       icon: _selectedIcon,
       bg: _selectedScheme.bg,
       color: _selectedScheme.color,
-      amount: 0,
-      pct: 0,
     ));
     widget.onClose();
   }
@@ -142,10 +69,7 @@ class _AddModalState extends State<AddModal> {
                     children: [
                       const Text('Tambah Kategori',
                           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF2D2218))),
-                      GestureDetector(
-                        onTap: widget.onClose,
-                        child: const Icon(Icons.close, size: 20, color: Color(0xFF9E8F82)),
-                      ),
+                      GestureDetector(onTap: widget.onClose, child: const Icon(Icons.close, size: 20, color: Color(0xFF9E8F82))),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -188,7 +112,7 @@ class _AddModalState extends State<AddModal> {
                   const Text('Warna', style: TextStyle(fontSize: 11, color: kBrownLight)),
                   const SizedBox(height: 6),
                   Row(
-                    children: bgOptions.map((s) {
+                    children: colorSchemes.map((s) {
                       final selected = _selectedScheme == s;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -197,8 +121,7 @@ class _AddModalState extends State<AddModal> {
                           child: Container(
                             width: 26, height: 26,
                             decoration: BoxDecoration(
-                              color: s.color,
-                              shape: BoxShape.circle,
+                              color: s.color, shape: BoxShape.circle,
                               border: selected ? Border.all(color: Colors.white, width: 2) : null,
                               boxShadow: selected ? [BoxShadow(color: s.color.withOpacity(0.7), blurRadius: 0, spreadRadius: 2)] : null,
                             ),
@@ -231,47 +154,95 @@ class _AddModalState extends State<AddModal> {
   }
 }
 
+const List<String> iconOptions = ["🍔","🚗","🏠","🛍","❤️","💆","🎓","✈️","🎮","💡","🐶","📱","🎵","💪","🧴"];
+
+class _ColorScheme {
+  final Color bg;
+  final Color color;
+  const _ColorScheme(this.bg, this.color);
+}
+
+const List<_ColorScheme> colorSchemes = [
+  _ColorScheme(Color(0xFFFFF3E0), Color(0xFFF4A03A)),
+  _ColorScheme(Color(0xFFE3F2FD), Color(0xFF42A5F5)),
+  _ColorScheme(Color(0xFFE8F5E9), Color(0xFF66BB6A)),
+  _ColorScheme(Color(0xFFFCE4EC), Color(0xFFEC407A)),
+  _ColorScheme(Color(0xFFFDF3E7), Color(0xFFEF5350)),
+  _ColorScheme(Color(0xFFF3E5F5), Color(0xFFAB47BC)),
+  _ColorScheme(Color(0xFFE8EAF6), Color(0xFF5C6BC0)),
+  _ColorScheme(Color(0xFFE0F7FA), Color(0xFF00ACC1)),
+];
+
 // ── HOME SCREEN ───────────────────────────────────────────────────────────────
 
 class HomeScreen extends StatefulWidget {
-  final VoidCallback? onRincian; // ← TAMBAH INI
-  const HomeScreen({super.key, this.onRincian}); // ← TAMBAH INI
+  final VoidCallback? onRincian;
+  const HomeScreen({super.key, this.onRincian});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Category> _categories = List.from(defaultCategories);
   bool _showModal = false;
 
-  void _handleAdd(Category cat) {
-    setState(() => _categories.add(cat));
+  String _formatRp(int num) {
+    final s = num.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
+    return 'Rp $s';
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBg,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              _buildHeader(),
-              _buildBody(),
-            ],
-          ),
-          if (_showModal)
-            AddModal(
-              onClose: () => setState(() => _showModal = false),
-              onAdd: _handleAdd,
-            ),
-        ],
+  void _openCategoryInput(BuildContext context, CategoryData cat, int totalSaldo) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CategoryInputScreen(
+          category: cat,
+          totalSaldo: totalSaldo,
+          onSave: (amount) {
+            context.read<AppState>().setAmount(cat.id, amount);
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AppState>(
+      builder: (context, state, _) {
+        final totalSaldo = state.totalSaldo;
+        final totalPengeluaran = state.categories.fold(0, (sum, c) => sum + c.amount);
+
+        return Scaffold(
+          backgroundColor: kBg,
+          body: Stack(
+            children: [
+              Column(
+                children: [
+                  _buildHeader(state, totalSaldo, totalPengeluaran),
+                  _buildBody(context, state, totalSaldo),
+                ],
+              ),
+              if (_showModal)
+                AddCategoryModal(
+                  onClose: () => setState(() => _showModal = false),
+                  onAdd: (cat) {
+                    state.tambahCategory(cat);
+                    setState(() => _showModal = false);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildHeader(AppState state, int totalSaldo, int totalPengeluaran) {
+    final sisaSaldo = totalSaldo - totalPengeluaran;
     return Container(
       color: kBrown,
       padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 16, 20, 28),
@@ -325,24 +296,24 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 6),
 
-          // Total saldo
+          // Total saldo (dinamis dari AppState)
           Text('Total Saldo', style: TextStyle(fontSize: 10, letterSpacing: 0.5, color: Colors.white.withOpacity(0.55))),
           const SizedBox(height: 4),
-          const Text('Rp 2.350.000',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.5)),
+          Text(_formatRp(totalSaldo),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.5)),
           const SizedBox(height: 16),
 
-          // Income / expense cards
+          // Pemasukan / Pengeluaran
           Row(
             children: [
-              Expanded(child: _buildSummaryCard('Pemasukan',   '+1.000.000', const Color(0xFF7EE8A2))),
+              Expanded(child: _buildSummaryCard('Pemasukan',   _formatRp(totalSaldo),        const Color(0xFF7EE8A2))),
               const SizedBox(width: 10),
-              Expanded(child: _buildSummaryCard('Pengeluaran', '-650.000',   const Color(0xFFF8A5A5))),
+              Expanded(child: _buildSummaryCard('Pengeluaran', '-${_formatRp(totalPengeluaran)}', const Color(0xFFF8A5A5))),
             ],
           ),
           const SizedBox(height: 10),
 
-          // Rincian ← GANTI onTap pakai widget.onRincian
+          // Rincian
           GestureDetector(
             onTap: widget.onRincian,
             child: Align(
@@ -380,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(BuildContext context, AppState state, int totalSaldo) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,7 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
               children: [
-                ..._categories.map(_buildCategoryCard),
+                ...state.categories.map((cat) => _buildCategoryCard(context, cat, totalSaldo)),
                 _buildAddButton(),
               ],
             ),
@@ -404,47 +375,70 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCategoryCard(Category cat) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withOpacity(0.06), width: 0.5),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(color: cat.bg, borderRadius: BorderRadius.circular(12)),
-            child: Center(child: Text(cat.icon, style: const TextStyle(fontSize: 18))),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(cat.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218))),
-                const SizedBox(height: 2),
-                Text('${cat.pct}% dari total', style: const TextStyle(fontSize: 10, color: Color(0xFF9E8F82))),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: LinearProgressIndicator(
-                    value: cat.pct / 100,
-                    minHeight: 3,
-                    backgroundColor: const Color(0xFFF0E9E2),
-                    valueColor: AlwaysStoppedAnimation<Color>(cat.color),
-                  ),
-                ),
-              ],
+  Widget _buildCategoryCard(BuildContext context, CategoryData cat, int totalSaldo) {
+    final pct = cat.pct(totalSaldo);
+    final hasAmount = cat.amount > 0;
+
+    return GestureDetector(
+      onTap: () => _openCategoryInput(context, cat, totalSaldo),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.black.withOpacity(0.06), width: 0.5),
+        ),
+        child: Row(
+          children: [
+            // Icon bubble
+            Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(color: cat.bg, borderRadius: BorderRadius.circular(12)),
+              child: Center(child: Text(cat.icon, style: const TextStyle(fontSize: 18))),
             ),
-          ),
-          const SizedBox(width: 10),
-          Text(formatRp(cat.amount),
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218))),
-        ],
+            const SizedBox(width: 12),
+
+            // Name + progress
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(cat.name,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218))),
+                  const SizedBox(height: 2),
+                  Text(
+                    hasAmount ? '$pct% dari total saldo' : 'Tap untuk isi pengeluaran',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: hasAmount ? const Color(0xFF9E8F82) : kBrown.withOpacity(0.5),
+                      fontStyle: hasAmount ? FontStyle.normal : FontStyle.italic,
+                    ),
+                  ),
+                  if (hasAmount) ...[
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: LinearProgressIndicator(
+                        value: (pct / 100).clamp(0.0, 1.0),
+                        minHeight: 3,
+                        backgroundColor: const Color(0xFFF0E9E2),
+                        valueColor: AlwaysStoppedAnimation<Color>(cat.color),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+
+            // Amount
+            hasAmount
+                ? Text(_formatRp(cat.amount),
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218)))
+                : Icon(Icons.add_circle_outline, size: 18, color: kBrown.withOpacity(0.4)),
+          ],
+        ),
       ),
     );
   }

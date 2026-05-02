@@ -1,21 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'app_state.dart';
 
 const Color kBrown = Color(0xFF4A3728);
 const Color kBrownDark = Color(0xFF3A2218);
-
-class AkunItem {
-  final String nama;
-  final String tipe;
-  final int saldo;
-  final Color bgColor;
-
-  AkunItem({
-    required this.nama,
-    required this.tipe,
-    required this.saldo,
-    required this.bgColor,
-  });
-}
 
 class RincianScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -30,23 +18,12 @@ class _RincianScreenState extends State<RincianScreen>
   late AnimationController _slideController;
   late Animation<Offset> _slideAnim;
 
-  final List<AkunItem> _akunList = [
-    AkunItem(nama: 'Bank BCA',   tipe: 'bank', saldo: 1000000, bgColor: const Color(0xFFE8F4FF)),
-    AkunItem(nama: 'Uang Tunai', tipe: 'cash', saldo: 1350000, bgColor: const Color(0xFFE8F5E9)),
-  ];
-
   @override
   void initState() {
     super.initState();
-    _slideController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(1, 0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
-
+    _slideController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _slideAnim = Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
     _slideController.forward();
   }
 
@@ -55,8 +32,6 @@ class _RincianScreenState extends State<RincianScreen>
     _slideController.dispose();
     super.dispose();
   }
-
-  int get _totalSaldo => _akunList.fold(0, (sum, a) => sum + a.saldo);
 
   String _formatRp(int num) {
     final s = num.toString().replaceAllMapped(
@@ -71,7 +46,7 @@ class _RincianScreenState extends State<RincianScreen>
     widget.onBack();
   }
 
-  void _showTambahAkun() {
+  void _showTambahAkun(AppState state) {
     final namaController = TextEditingController();
     final saldoController = TextEditingController();
     String selectedType = 'bank';
@@ -98,14 +73,10 @@ class _RincianScreenState extends State<RincianScreen>
                   children: [
                     const Text('Tambah Akun',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF2D2218))),
-                    GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: const Icon(Icons.close, size: 20, color: Color(0xFF9E8F82)),
-                    ),
+                    GestureDetector(onTap: () => Navigator.pop(ctx), child: const Icon(Icons.close, size: 20, color: Color(0xFF9E8F82))),
                   ],
                 ),
                 const SizedBox(height: 20),
-
                 const Text('Jenis Akun', style: TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
                 const SizedBox(height: 8),
                 Row(
@@ -118,17 +89,14 @@ class _RincianScreenState extends State<RincianScreen>
                   ],
                 ),
                 const SizedBox(height: 14),
-
                 const Text('Nama Akun', style: TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
                 const SizedBox(height: 4),
                 _buildInput(controller: namaController, hint: 'cth: Bank BRI, OVO...'),
                 const SizedBox(height: 12),
-
                 const Text('Saldo Awal', style: TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
                 const SizedBox(height: 4),
                 _buildInput(controller: saldoController, hint: '0', keyboardType: TextInputType.number, prefix: 'Rp '),
                 const SizedBox(height: 20),
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -136,18 +104,12 @@ class _RincianScreenState extends State<RincianScreen>
                       final nama = namaController.text.trim();
                       final saldo = int.tryParse(saldoController.text.replaceAll('.', '').trim()) ?? 0;
                       if (nama.isEmpty) return;
-                      setState(() {
-                        _akunList.add(AkunItem(
-                          nama: nama,
-                          tipe: selectedType,
-                          saldo: saldo,
-                          bgColor: selectedType == 'bank'
-                              ? const Color(0xFFE8F4FF)
-                              : selectedType == 'cash'
-                                  ? const Color(0xFFE8F5E9)
-                                  : const Color(0xFFF3E5F5),
-                        ));
-                      });
+                      state.tambahAkun(AkunItem(
+                        nama: nama, tipe: selectedType, saldo: saldo,
+                        bgColor: selectedType == 'bank' ? const Color(0xFFE8F4FF)
+                            : selectedType == 'cash' ? const Color(0xFFE8F5E9)
+                            : const Color(0xFFF3E5F5),
+                      ));
                       Navigator.pop(ctx);
                     },
                     style: ElevatedButton.styleFrom(
@@ -156,8 +118,7 @@ class _RincianScreenState extends State<RincianScreen>
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
                     ),
-                    child: const Text('Tambah',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                    child: const Text('Tambah', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
                   ),
                 ),
               ],
@@ -178,31 +139,20 @@ class _RincianScreenState extends State<RincianScreen>
           color: isSelected ? kBrown : const Color(0xFFF5F0EA),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(label,
-            style: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w600,
-              color: isSelected ? Colors.white : const Color(0xFF9E8F82),
-            )),
+        child: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : const Color(0xFF9E8F82))),
       ),
     );
   }
 
-  Widget _buildInput({
-    required TextEditingController controller,
-    required String hint,
-    TextInputType keyboardType = TextInputType.text,
-    String? prefix,
-  }) {
+  Widget _buildInput({required TextEditingController controller, required String hint, TextInputType keyboardType = TextInputType.text, String? prefix}) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
       style: const TextStyle(fontSize: 13, color: Color(0xFF2D2218)),
       decoration: InputDecoration(
-        hintText: hint,
-        prefixText: prefix,
+        hintText: hint, prefixText: prefix,
         hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFBDB0A6)),
-        filled: true,
-        fillColor: const Color(0xFFF5F0EA),
+        filled: true, fillColor: const Color(0xFFF5F0EA),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE8E0D8))),
@@ -213,21 +163,25 @@ class _RincianScreenState extends State<RincianScreen>
 
   @override
   Widget build(BuildContext context) {
-    return SlideTransition(
-      position: _slideAnim,
-      child: Container(
-        color: kBrownDark,
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildBody()),
-          ],
-        ),
-      ),
+    return Consumer<AppState>(
+      builder: (context, state, _) {
+        return SlideTransition(
+          position: _slideAnim,
+          child: Container(
+            color: kBrownDark,
+            child: Column(
+              children: [
+                _buildHeader(state),
+                Expanded(child: _buildBody(state)),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppState state) {
     return Container(
       color: kBrownDark,
       padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 12, 20, 20),
@@ -243,8 +197,7 @@ class _RincianScreenState extends State<RincianScreen>
                   children: [
                     Icon(Icons.chevron_left, size: 18, color: Colors.white.withOpacity(0.8)),
                     const SizedBox(width: 2),
-                    Text('Ringkasan',
-                        style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.w500)),
+                    Text('Ringkasan', style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
@@ -252,18 +205,15 @@ class _RincianScreenState extends State<RincianScreen>
             ],
           ),
           const SizedBox(height: 20),
-
-          Text('TOTAL SALDO SAAT INI',
-              style: TextStyle(fontSize: 10, letterSpacing: 1, color: Colors.white.withOpacity(0.55))),
+          Text('TOTAL SALDO SAAT INI', style: TextStyle(fontSize: 10, letterSpacing: 1, color: Colors.white.withOpacity(0.55))),
           const SizedBox(height: 6),
-          Text(_formatRp(_totalSaldo),
+          Text(_formatRp(state.totalSaldo),
               style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.5)),
           const SizedBox(height: 16),
-
           Align(
             alignment: Alignment.centerRight,
             child: GestureDetector(
-              onTap: _showTambahAkun,
+              onTap: () => _showTambahAkun(state),
               child: Container(
                 width: 32, height: 32,
                 decoration: BoxDecoration(
@@ -280,47 +230,38 @@ class _RincianScreenState extends State<RincianScreen>
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(AppState state) {
     return Container(
       color: kBrownDark,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-        itemCount: _akunList.length,
-        itemBuilder: (_, i) => _buildAkunCard(_akunList[i]),
-      ),
-    );
-  }
-
-  Widget _buildAkunCard(AkunItem akun) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF5A3D2B),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46, height: 46,
-            decoration: BoxDecoration(color: akun.bgColor, borderRadius: BorderRadius.circular(12)),
-            child: Center(child: _akunIcon(akun.tipe)),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(akun.nama,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
-          ),
-          Text(_formatRp(akun.saldo),
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF7EE8A2))),
-        ],
+        itemCount: state.akunList.length,
+        itemBuilder: (_, i) {
+          final akun = state.akunList[i];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(color: const Color(0xFF5A3D2B), borderRadius: BorderRadius.circular(16)),
+            child: Row(
+              children: [
+                Container(
+                  width: 46, height: 46,
+                  decoration: BoxDecoration(color: akun.bgColor, borderRadius: BorderRadius.circular(12)),
+                  child: Center(child: _akunIcon(akun.tipe)),
+                ),
+                const SizedBox(width: 14),
+                Expanded(child: Text(akun.nama, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white))),
+                Text(_formatRp(akun.saldo), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF7EE8A2))),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _akunIcon(String tipe) {
     switch (tipe) {
-      case 'bca':
       case 'bank':    return const Text('🏦', style: TextStyle(fontSize: 22));
       case 'cash':    return const Text('💵', style: TextStyle(fontSize: 22));
       case 'ewallet': return const Text('📱', style: TextStyle(fontSize: 22));

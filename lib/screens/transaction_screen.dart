@@ -1,94 +1,349 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/transaction_provider.dart';
+import 'add_transaction_screen.dart';
 
-class TransactionScreen extends StatelessWidget {
+class TransactionScreen extends StatefulWidget {
   const TransactionScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text(
-          'Riwayat Transaksi',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: Consumer<TransactionProvider>(
-        builder: (context, transProvider, child) {
-          if (transProvider.items.isEmpty) {
-            return const Center(
-              child: Text(
-                'Belum ada transaksi, Masbro. Santai dulu! 🦦',
-                style: TextStyle(color: Colors.grey),
-              ),
-            );
-          }
+  State<TransactionScreen> createState() => _TransactionScreenState();
+}
 
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            itemCount: transProvider.items.length,
-            itemBuilder: (context, index) {
-              final item = transProvider.items[index];
-              return Card(
-                elevation: 0,
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.grey.shade100),
+class _TransactionScreenState extends State<TransactionScreen> {
+  DateTime _focusedDay = DateTime.now();
+  DateTime _selectedDay = DateTime.now();
+
+  static const Color kBrown = Color(0xFF4A3728);
+  static const Color kBg = Color(0xFFF5F0EA);
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<TransactionProvider>(
+      builder: (context, provider, _) {
+        final transaksiBulan = provider.getByMonth(_focusedDay.year, _focusedDay.month);
+        final transaksiHariIni = provider.getByDay(_selectedDay);
+        final dotDays = provider.getDotDays(_focusedDay.year, _focusedDay.month);
+
+        final pemasukanHari = transaksiHariIni
+            .where((t) => t.tipe == 'pemasukan')
+            .fold(0.0, (sum, t) => sum + t.amount);
+        final pengeluaranHari = transaksiHariIni
+            .where((t) => t.tipe == 'pengeluaran')
+            .fold(0.0, (sum, t) => sum + t.amount);
+        final saldoHari = pemasukanHari - pengeluaranHari;
+
+        return Scaffold(
+          backgroundColor: kBg,
+          body: Column(
+            children: [
+              // ── HEADER COKELAT ─────────────────────────────────────────────
+              Container(
+                color: kBrown,
+                child: SafeArea(
+                  bottom: false,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      // Navigasi bulan
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            GestureDetector(
+                              onTap: () => setState(() =>
+                                  _focusedDay = DateTime(_focusedDay.year, _focusedDay.month - 1)),
+                              child: const Icon(Icons.chevron_left, color: Colors.white),
+                            ),
+                            Text(
+                              _namabulan(_focusedDay.month) + ' ${_focusedDay.year}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => setState(() =>
+                                  _focusedDay = DateTime(_focusedDay.year, _focusedDay.month + 1)),
+                              child: const Icon(Icons.chevron_right, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Header hari
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          children: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
+                              .map((d) => Expanded(
+                                    child: Center(
+                                      child: Text(d,
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.white.withOpacity(0.6),
+                                              fontWeight: FontWeight.w500)),
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Grid kalender
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: _buildCalendarGrid(dotDays),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Summary per hari
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            _summaryItem('PEMASUKAN', pemasukanHari, const Color(0xFF7EE8A2)),
+                            _divider(),
+                            _summaryItem('PENGELUARAN', pengeluaranHari, const Color(0xFFF8A5A5)),
+                            _divider(),
+                            _summaryItem('SALDO', saldoHari, Colors.white),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: ListTile(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Detail untuk ${item.title}")),
-                    );
-                  },
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF9DB),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(item.icon, color: const Color(0xFF41241A)),
-                  ),
-                  title: Text(
-                    item.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    item.time,
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  ),
-                  trailing: Text(
-                    "-Rp${item.amount.toInt()}",
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              ),
+
+              // ── LIST TRANSAKSI ─────────────────────────────────────────────
+              Expanded(
+                child: transaksiHariIni.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('🦦', style: const TextStyle(fontSize: 40)),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Belum ada transaksi hari ini',
+                              style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                        children: [
+                          // Label tanggal
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _labelHari(_selectedDay),
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF2D2218)),
+                                ),
+                                Text(
+                                  saldoHari >= 0
+                                      ? '+ ${_formatRp(saldoHari.abs().toInt())}'
+                                      : '= -${_formatRp(saldoHari.abs().toInt())}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: saldoHari >= 0
+                                        ? const Color(0xFF4CAF50)
+                                        : const Color(0xFFEF5350),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ...transaksiHariIni.map((t) => _buildTransaksiCard(t)),
+                        ],
+                      ),
+              ),
+            ],
+          ),
+
+          // Tombol +
+          floatingActionButton: FloatingActionButton(
+            backgroundColor: kBrown,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddTransactionScreen()),
               );
             },
-          );
-        },
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCalendarGrid(Set<int> dotDays) {
+    final firstDay = DateTime(_focusedDay.year, _focusedDay.month, 1);
+    // Senin = 1, jadi offset = weekday - 1
+    final offset = (firstDay.weekday - 1) % 7;
+    final daysInMonth = DateTime(_focusedDay.year, _focusedDay.month + 1, 0).day;
+    final totalCells = offset + daysInMonth;
+    final rows = (totalCells / 7).ceil();
+
+    return Column(
+      children: List.generate(rows, (row) {
+        return Row(
+          children: List.generate(7, (col) {
+            final cellIndex = row * 7 + col;
+            final day = cellIndex - offset + 1;
+            if (day < 1 || day > daysInMonth) {
+              return const Expanded(child: SizedBox(height: 36));
+            }
+            final date = DateTime(_focusedDay.year, _focusedDay.month, day);
+            final isSelected = _isSameDay(date, _selectedDay);
+            final isToday = _isSameDay(date, DateTime.now());
+            final hasDot = dotDays.contains(day);
+
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _selectedDay = date),
+                child: Container(
+                  height: 36,
+                  margin: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    border: isToday && !isSelected
+                        ? Border.all(color: Colors.white.withOpacity(0.4), width: 1)
+                        : null,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '$day',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isSelected || isToday ? FontWeight.w700 : FontWeight.w400,
+                          color: isSelected ? kBrown : Colors.white,
+                        ),
+                      ),
+                      if (hasDot)
+                        Container(
+                          width: 4, height: 4,
+                          decoration: BoxDecoration(
+                            color: isSelected ? kBrown : const Color(0xFFEF5350),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+        );
+      }),
+    );
+  }
+
+  Widget _buildTransaksiCard(TransactionItem t) {
+    final isPemasukan = t.tipe == 'pemasukan';
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black.withOpacity(0.05), width: 0.5),
       ),
-      // --- INI TOMBOL TAMBAHNYA ---
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF41241A),
-        onPressed: () {
-          // Setiap kali ditekan, akan menambah transaksi dummy untuk tes
-          context.read<TransactionProvider>().addTransaction(
-                "Makan Masbro",
-                25000,
-                Icons.fastfood_rounded,
-              );
-        },
-        child: const Icon(Icons.add, color: Colors.white),
+      child: Row(
+        children: [
+          Container(
+            width: 42, height: 42,
+            decoration: BoxDecoration(
+              color: isPemasukan ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(child: Text(t.iconEmoji, style: const TextStyle(fontSize: 20))),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(t.title,
+                    style: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218))),
+                const SizedBox(height: 2),
+                Text('${t.kategori} • ${t.akun}',
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
+              ],
+            ),
+          ),
+          Text(
+            '${isPemasukan ? '+' : '-'} ${_formatRp(t.amount.toInt())}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: isPemasukan ? const Color(0xFF4CAF50) : const Color(0xFF2D2218),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _summaryItem(String label, double amount, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(label,
+              style: TextStyle(fontSize: 9, color: Colors.white.withOpacity(0.6), letterSpacing: 0.5)),
+          const SizedBox(height: 4),
+          Text(
+            _formatRp(amount.abs().toInt()),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _divider() => Container(
+        width: 1, height: 30,
+        color: Colors.white.withOpacity(0.15),
+      );
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  String _namabulan(int m) => [
+        '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ][m];
+
+  String _labelHari(DateTime d) {
+    final hari = ['', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'][d.weekday];
+    return '$hari, ${d.day} ${_namabulan(d.month).substring(0, 3)}';
+  }
+
+  String _formatRp(int num) {
+    final s = num.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
+    return 'Rp $s';
   }
 }

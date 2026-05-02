@@ -4,15 +4,8 @@ import 'home_screen.dart';
 import 'transaction_screen.dart';
 import 'rincian_screen.dart';
 
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'home_screen.dart';
-import 'transaction_screen.dart';
-import 'rincian_screen.dart';
-
 class MainScreen extends StatefulWidget {
-  // ← ganti HomeScreen jadi MainScreen
-  const MainScreen({super.key}); // ← hapus onRincian, ini bukan tempatnya
+  const MainScreen({super.key});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -29,7 +22,7 @@ class _MainScreenState extends State<MainScreen> {
     HapticFeedback.lightImpact();
     setState(() {
       _selectedIndex = index;
-      _showRincian = false; // tutup rincian kalau pindah tab
+      _showRincian = false;
     });
   }
 

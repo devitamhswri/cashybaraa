@@ -1,23 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:cashybara/providers/transaction_provider.dart';
-import 'package:cashybara/screens/login_screen.dart';
-import 'package:cashybara/screens/main_screen.dart'; // Import file baru ini
+import 'screens/app_state.dart';
+import 'screens/main_screen.dart';
+import 'providers/transaction_provider.dart';
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AppState()),
         ChangeNotifierProvider(create: (_) => TransactionProvider()),
       ],
       child: const CashyBaraApp(),
     ),
   );
 }
-
-
-
 
 class CashyBaraApp extends StatelessWidget {
   const CashyBaraApp({super.key});
@@ -28,12 +25,11 @@ class CashyBaraApp extends StatelessWidget {
       title: 'CashyBara',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF41241A)),
+        fontFamily: 'Plus Jakarta Sans',
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF4A3728)),
         useMaterial3: true,
-        textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
       ),
-      // Tetap mulai dari Login, nanti setelah login arahkan ke MainScreen()
-      home: const LoginScreen(), 
+      home: const MainScreen(),
     );
   }
 }
