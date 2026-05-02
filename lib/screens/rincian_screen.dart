@@ -5,20 +5,21 @@ const Color kBrownDark = Color(0xFF3A2218);
 
 class AkunItem {
   final String nama;
-  final String imagePath; // asset path atau network url
+  final String tipe;
   final int saldo;
   final Color bgColor;
 
   AkunItem({
     required this.nama,
-    required this.imagePath,
+    required this.tipe,
     required this.saldo,
     required this.bgColor,
   });
 }
 
 class RincianScreen extends StatefulWidget {
-  const RincianScreen({super.key});
+  final VoidCallback onBack;
+  const RincianScreen({super.key, required this.onBack});
 
   @override
   State<RincianScreen> createState() => _RincianScreenState();
@@ -30,18 +31,8 @@ class _RincianScreenState extends State<RincianScreen>
   late Animation<Offset> _slideAnim;
 
   final List<AkunItem> _akunList = [
-    AkunItem(
-      nama: 'Bank BCA',
-      imagePath: 'bca', // placeholder — ganti dengan asset kamu
-      saldo: 1000000,
-      bgColor: const Color(0xFFE8F4FF),
-    ),
-    AkunItem(
-      nama: 'Uang Tunai',
-      imagePath: 'cash',
-      saldo: 1350000,
-      bgColor: const Color(0xFFE8F5E9),
-    ),
+    AkunItem(nama: 'Bank BCA',   tipe: 'bank', saldo: 1000000, bgColor: const Color(0xFFE8F4FF)),
+    AkunItem(nama: 'Uang Tunai', tipe: 'cash', saldo: 1350000, bgColor: const Color(0xFFE8F5E9)),
   ];
 
   @override
@@ -77,8 +68,7 @@ class _RincianScreenState extends State<RincianScreen>
 
   void _goBack() async {
     await _slideController.reverse();
-    if (!mounted) return;
-    Navigator.pop(context);
+    widget.onBack();
   }
 
   void _showTambahAkun() {
@@ -107,7 +97,7 @@ class _RincianScreenState extends State<RincianScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Tambah Akun',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF2D2218))),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF2D2218))),
                     GestureDetector(
                       onTap: () => Navigator.pop(ctx),
                       child: const Icon(Icons.close, size: 20, color: Color(0xFF9E8F82)),
@@ -116,16 +106,15 @@ class _RincianScreenState extends State<RincianScreen>
                 ),
                 const SizedBox(height: 20),
 
-                // Tipe akun
                 const Text('Jenis Akun', style: TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    _typeChip('Bank', 'bank', selectedType, (v) => setModal(() => selectedType = v)),
+                    _typeChip('Bank',       'bank',    selectedType, (v) => setModal(() => selectedType = v)),
                     const SizedBox(width: 8),
-                    _typeChip('Uang Tunai', 'cash', selectedType, (v) => setModal(() => selectedType = v)),
+                    _typeChip('Uang Tunai', 'cash',    selectedType, (v) => setModal(() => selectedType = v)),
                     const SizedBox(width: 8),
-                    _typeChip('E-Wallet', 'ewallet', selectedType, (v) => setModal(() => selectedType = v)),
+                    _typeChip('E-Wallet',   'ewallet', selectedType, (v) => setModal(() => selectedType = v)),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -137,12 +126,7 @@ class _RincianScreenState extends State<RincianScreen>
 
                 const Text('Saldo Awal', style: TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
                 const SizedBox(height: 4),
-                _buildInput(
-                  controller: saldoController,
-                  hint: '0',
-                  keyboardType: TextInputType.number,
-                  prefix: 'Rp ',
-                ),
+                _buildInput(controller: saldoController, hint: '0', keyboardType: TextInputType.number, prefix: 'Rp '),
                 const SizedBox(height: 20),
 
                 SizedBox(
@@ -150,15 +134,12 @@ class _RincianScreenState extends State<RincianScreen>
                   child: ElevatedButton(
                     onPressed: () {
                       final nama = namaController.text.trim();
-                      final saldo = int.tryParse(
-                        saldoController.text.replaceAll('.', '').trim(),
-                      ) ?? 0;
+                      final saldo = int.tryParse(saldoController.text.replaceAll('.', '').trim()) ?? 0;
                       if (nama.isEmpty) return;
-
                       setState(() {
                         _akunList.add(AkunItem(
                           nama: nama,
-                          imagePath: selectedType,
+                          tipe: selectedType,
                           saldo: saldo,
                           bgColor: selectedType == 'bank'
                               ? const Color(0xFFE8F4FF)
@@ -176,7 +157,7 @@ class _RincianScreenState extends State<RincianScreen>
                       elevation: 0,
                     ),
                     child: const Text('Tambah',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
                   ),
                 ),
               ],
@@ -197,14 +178,11 @@ class _RincianScreenState extends State<RincianScreen>
           color: isSelected ? kBrown : const Color(0xFFF5F0EA),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.white : const Color(0xFF9E8F82),
-          ),
-        ),
+        child: Text(label,
+            style: TextStyle(
+              fontSize: 12, fontWeight: FontWeight.w600,
+              color: isSelected ? Colors.white : const Color(0xFF9E8F82),
+            )),
       ),
     );
   }
@@ -235,22 +213,19 @@ class _RincianScreenState extends State<RincianScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBrownDark,
-      body: SlideTransition(
-        position: _slideAnim,
+    return SlideTransition(
+      position: _slideAnim,
+      child: Container(
+        color: kBrownDark,
         child: Column(
           children: [
             _buildHeader(),
             Expanded(child: _buildBody()),
-            _buildBottomNav(),
           ],
         ),
       ),
     );
   }
-
-  // ── HEADER ──────────────────────────────────────────────────────────────────
 
   Widget _buildHeader() {
     return Container(
@@ -259,7 +234,6 @@ class _RincianScreenState extends State<RincianScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Ringkasan + gear
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -269,10 +243,8 @@ class _RincianScreenState extends State<RincianScreen>
                   children: [
                     Icon(Icons.chevron_left, size: 18, color: Colors.white.withOpacity(0.8)),
                     const SizedBox(width: 2),
-                    Text(
-                      'Ringkasan',
-                      style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.w500),
-                    ),
+                    Text('Ringkasan',
+                        style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.w500)),
                   ],
                 ),
               ),
@@ -281,21 +253,13 @@ class _RincianScreenState extends State<RincianScreen>
           ),
           const SizedBox(height: 20),
 
-          // Total saldo
-          Text(
-            'TOTAL SALDO SAAT INI',
-            style: TextStyle(fontSize: 10, letterSpacing: 1, color: Colors.white.withOpacity(0.55)),
-          ),
+          Text('TOTAL SALDO SAAT INI',
+              style: TextStyle(fontSize: 10, letterSpacing: 1, color: Colors.white.withOpacity(0.55))),
           const SizedBox(height: 6),
-          Text(
-            _formatRp(_totalSaldo),
-            style: const TextStyle(
-              fontSize: 30, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.5,
-            ),
-          ),
+          Text(_formatRp(_totalSaldo),
+              style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.5)),
           const SizedBox(height: 16),
 
-          // Tombol tambah
           Align(
             alignment: Alignment.centerRight,
             child: GestureDetector(
@@ -315,8 +279,6 @@ class _RincianScreenState extends State<RincianScreen>
       ),
     );
   }
-
-  // ── BODY ────────────────────────────────────────────────────────────────────
 
   Widget _buildBody() {
     return Container(
@@ -339,99 +301,30 @@ class _RincianScreenState extends State<RincianScreen>
       ),
       child: Row(
         children: [
-          // Icon akun
           Container(
             width: 46, height: 46,
-            decoration: BoxDecoration(
-              color: akun.bgColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(child: _akunIcon(akun.imagePath)),
+            decoration: BoxDecoration(color: akun.bgColor, borderRadius: BorderRadius.circular(12)),
+            child: Center(child: _akunIcon(akun.tipe)),
           ),
           const SizedBox(width: 14),
-
-          // Nama
           Expanded(
-            child: Text(
-              akun.nama,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
-            ),
+            child: Text(akun.nama,
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
           ),
-
-          // Saldo
-          Text(
-            _formatRp(akun.saldo),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF7EE8A2)),
-          ),
+          Text(_formatRp(akun.saldo),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF7EE8A2))),
         ],
       ),
     );
   }
 
-  Widget _akunIcon(String type) {
-    switch (type) {
+  Widget _akunIcon(String tipe) {
+    switch (tipe) {
       case 'bca':
-        return const Text('🏦', style: TextStyle(fontSize: 22));
-      case 'cash':
-        return const Text('💵', style: TextStyle(fontSize: 22));
-      case 'ewallet':
-        return const Text('📱', style: TextStyle(fontSize: 22));
-      case 'bank':
-        return const Text('🏦', style: TextStyle(fontSize: 22));
-      default:
-        return const Icon(Icons.account_balance_wallet_outlined, size: 22, color: Color(0xFF9E8F82));
+      case 'bank':    return const Text('🏦', style: TextStyle(fontSize: 22));
+      case 'cash':    return const Text('💵', style: TextStyle(fontSize: 22));
+      case 'ewallet': return const Text('📱', style: TextStyle(fontSize: 22));
+      default:        return const Icon(Icons.account_balance_wallet_outlined, size: 22, color: Color(0xFF9E8F82));
     }
-  }
-
-  // ── BOTTOM NAV ───────────────────────────────────────────────────────────────
-
-  Widget _buildBottomNav() {
-    return Container(
-      color: kBrownDark,
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 8, top: 8),
-        child: Row(
-          children: [
-            _navItem(label: 'Beranda',   icon: Icons.grid_view_rounded,        active: false, onTap: _goBack),
-            _navItem(label: 'Transaksi', icon: Icons.receipt_long_outlined,     active: false, onTap: () {}),
-            _navItem(label: 'Statistik', icon: Icons.bar_chart_rounded,         active: false, onTap: () {}),
-            _navItem(label: 'Budget',    icon: Icons.account_balance_outlined,  active: false, onTap: () {}),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem({
-    required String label,
-    required IconData icon,
-    required bool active,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 22, color: active ? kBrown : const Color(0xFF9E8F82)),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w500,
-                color: active ? kBrown : const Color(0xFF9E8F82),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

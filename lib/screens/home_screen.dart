@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'setting_screen.dart';
-import 'rincian_screen.dart';
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
 
@@ -124,7 +123,7 @@ class _AddModalState extends State<AddModal> {
       child: Container(
         color: Colors.black.withOpacity(0.45),
         child: GestureDetector(
-          onTap: () {}, // prevent close when tapping modal content
+          onTap: () {},
           child: Align(
             alignment: Alignment.bottomCenter,
             child: Container(
@@ -138,14 +137,11 @@ class _AddModalState extends State<AddModal> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Tambah Kategori',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF2D2218)),
-                      ),
+                      const Text('Tambah Kategori',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF2D2218))),
                       GestureDetector(
                         onTap: widget.onClose,
                         child: const Icon(Icons.close, size: 20, color: Color(0xFF9E8F82)),
@@ -153,8 +149,6 @@ class _AddModalState extends State<AddModal> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // Nama
                   const Text('Nama Kategori', style: TextStyle(fontSize: 11, color: kBrownLight)),
                   const SizedBox(height: 4),
                   TextField(
@@ -164,42 +158,26 @@ class _AddModalState extends State<AddModal> {
                       hintText: 'cth: Hiburan',
                       hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFCCC0B4)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE0D6CC)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFFE0D6CC)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: kBrown),
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0D6CC))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0D6CC))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kBrown)),
                     ),
                   ),
                   const SizedBox(height: 14),
-
-                  // Pilih Ikon
                   const Text('Pilih Ikon', style: TextStyle(fontSize: 11, color: kBrownLight)),
                   const SizedBox(height: 6),
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: 8, runSpacing: 8,
                     children: iconOptions.map((ic) {
                       final selected = _selectedIcon == ic;
                       return GestureDetector(
                         onTap: () => setState(() => _selectedIcon = ic),
                         child: Container(
-                          width: 36,
-                          height: 36,
+                          width: 36, height: 36,
                           decoration: BoxDecoration(
                             color: selected ? const Color(0xFFF5F0EA) : Colors.white,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: selected ? kBrown : const Color(0xFFE0D6CC),
-                              width: selected ? 2 : 1.5,
-                            ),
+                            border: Border.all(color: selected ? kBrown : const Color(0xFFE0D6CC), width: selected ? 2 : 1.5),
                           ),
                           child: Center(child: Text(ic, style: const TextStyle(fontSize: 17))),
                         ),
@@ -207,8 +185,6 @@ class _AddModalState extends State<AddModal> {
                     }).toList(),
                   ),
                   const SizedBox(height: 14),
-
-                  // Warna
                   const Text('Warna', style: TextStyle(fontSize: 11, color: kBrownLight)),
                   const SizedBox(height: 6),
                   Row(
@@ -219,17 +195,12 @@ class _AddModalState extends State<AddModal> {
                         child: GestureDetector(
                           onTap: () => setState(() => _selectedScheme = s),
                           child: Container(
-                            width: 26,
-                            height: 26,
+                            width: 26, height: 26,
                             decoration: BoxDecoration(
                               color: s.color,
                               shape: BoxShape.circle,
-                              border: selected
-                                  ? Border.all(color: Colors.white, width: 2)
-                                  : null,
-                              boxShadow: selected
-                                  ? [BoxShadow(color: s.color.withOpacity(0.7), blurRadius: 0, spreadRadius: 2)]
-                                  : null,
+                              border: selected ? Border.all(color: Colors.white, width: 2) : null,
+                              boxShadow: selected ? [BoxShadow(color: s.color.withOpacity(0.7), blurRadius: 0, spreadRadius: 2)] : null,
                             ),
                           ),
                         ),
@@ -237,8 +208,6 @@ class _AddModalState extends State<AddModal> {
                     }).toList(),
                   ),
                   const SizedBox(height: 18),
-
-                  // Submit
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -249,10 +218,7 @@ class _AddModalState extends State<AddModal> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
                       ),
-                      child: const Text(
-                        'Tambah',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
-                      ),
+                      child: const Text('Tambah', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
                     ),
                   ),
                 ],
@@ -268,7 +234,8 @@ class _AddModalState extends State<AddModal> {
 // ── HOME SCREEN ───────────────────────────────────────────────────────────────
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onRincian; // ← TAMBAH INI
+  const HomeScreen({super.key, this.onRincian}); // ← TAMBAH INI
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -304,8 +271,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── HEADER ──────────────────────────────────────────────────────────────────
-
   Widget _buildHeader() {
     return Container(
       color: kBrown,
@@ -327,32 +292,21 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Icon(Icons.search, size: 14, color: Colors.white.withOpacity(0.7)),
                       const SizedBox(width: 8),
-                      Text(
-                        'Cari Transaksi...',
-                        style: TextStyle(
-                          fontSize: 11, fontStyle: FontStyle.italic,
-                          color: Colors.white.withOpacity(0.5),
-                        ),
-                      ),
+                      Text('Cari Transaksi...',
+                          style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.white.withOpacity(0.5))),
                     ],
                   ),
                 ),
               ),
               const SizedBox(width: 10),
-          GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingScreen()),
-            ),
-            child: Container(
-              width: 30, height: 30,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                shape: BoxShape.circle,
+              GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingScreen())),
+                child: Container(
+                  width: 30, height: 30,
+                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+                  child: Icon(Icons.settings_outlined, size: 15, color: Colors.white.withOpacity(0.8)),
+                ),
               ),
-              child: Icon(Icons.settings_outlined, size: 15, color: Colors.white.withOpacity(0.8)),
-            ),
-          ),
             ],
           ),
           const SizedBox(height: 18),
@@ -372,17 +326,10 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 6),
 
           // Total saldo
-          Text(
-            'Total Saldo',
-            style: TextStyle(
-              fontSize: 10, letterSpacing: 0.5, color: Colors.white.withOpacity(0.55),
-            ),
-          ),
+          Text('Total Saldo', style: TextStyle(fontSize: 10, letterSpacing: 0.5, color: Colors.white.withOpacity(0.55))),
           const SizedBox(height: 4),
-          const Text(
-            'Rp 2.350.000',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.5),
-          ),
+          const Text('Rp 2.350.000',
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.5)),
           const SizedBox(height: 16),
 
           // Income / expense cards
@@ -395,34 +342,21 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 10),
 
-          // Rincian
-          // SESUDAH
-GestureDetector(
-  onTap: () => Navigator.push(
-    context,
-    PageRouteBuilder(
-      pageBuilder: (_, __, ___) => const RincianScreen(),
-      transitionsBuilder: (_, anim, __, child) => SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(1, 0),
-          end: Offset.zero,
-        ).animate(anim),
-        child: child,
-      ),
-    ),
-  ),
-  child: Align(
-    alignment: Alignment.centerRight,
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text('Rincian', style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.6))),
-        const SizedBox(width: 3),
-        Icon(Icons.chevron_right, size: 14, color: Colors.white.withOpacity(0.4)),
-      ],
-    ),
-  ),
-),
+          // Rincian ← GANTI onTap pakai widget.onRincian
+          GestureDetector(
+            onTap: widget.onRincian,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Rincian', style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.6))),
+                  const SizedBox(width: 3),
+                  Icon(Icons.chevron_right, size: 14, color: Colors.white.withOpacity(0.4)),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -446,8 +380,6 @@ GestureDetector(
     );
   }
 
-  // ── BODY ────────────────────────────────────────────────────────────────────
-
   Widget _buildBody() {
     return Expanded(
       child: Column(
@@ -455,10 +387,8 @@ GestureDetector(
         children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 16, 20, 10),
-            child: Text(
-              'Pengeluaran per Kategori',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF3A2E25)),
-            ),
+            child: Text('Pengeluaran per Kategori',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF3A2E25))),
           ),
           Expanded(
             child: ListView(
@@ -485,31 +415,19 @@ GestureDetector(
       ),
       child: Row(
         children: [
-          // Icon bubble
           Container(
             width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: cat.bg,
-              borderRadius: BorderRadius.circular(12),
-            ),
+            decoration: BoxDecoration(color: cat.bg, borderRadius: BorderRadius.circular(12)),
             child: Center(child: Text(cat.icon, style: const TextStyle(fontSize: 18))),
           ),
           const SizedBox(width: 12),
-
-          // Name + progress
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  cat.name,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218)),
-                ),
+                Text(cat.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218))),
                 const SizedBox(height: 2),
-                Text(
-                  '${cat.pct}% dari total',
-                  style: const TextStyle(fontSize: 10, color: Color(0xFF9E8F82)),
-                ),
+                Text('${cat.pct}% dari total', style: const TextStyle(fontSize: 10, color: Color(0xFF9E8F82))),
                 const SizedBox(height: 4),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
@@ -524,14 +442,8 @@ GestureDetector(
             ),
           ),
           const SizedBox(width: 10),
-
-          // Amount
-          Text(
-            formatRp(cat.amount),
-            style: const TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218),
-            ),
-          ),
+          Text(formatRp(cat.amount),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218))),
         ],
       ),
     );
@@ -546,7 +458,7 @@ GestureDetector(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFC9B9A8), width: 1.5, style: BorderStyle.solid),
+          border: Border.all(color: const Color(0xFFC9B9A8), width: 1.5),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -554,15 +466,10 @@ GestureDetector(
             Container(
               width: 22, height: 22,
               decoration: const BoxDecoration(color: kBrown, shape: BoxShape.circle),
-              child: const Center(
-                child: Text('+', style: TextStyle(color: Colors.white, fontSize: 16, height: 1)),
-              ),
+              child: const Center(child: Text('+', style: TextStyle(color: Colors.white, fontSize: 16, height: 1))),
             ),
             const SizedBox(width: 8),
-            const Text(
-              'Tambah Kategori',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kBrown),
-            ),
+            const Text('Tambah Kategori', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kBrown)),
           ],
         ),
       ),
