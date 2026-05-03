@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'home_screen.dart';
 import 'transaction_screen.dart';
 import 'rincian_screen.dart';
+import 'statistik_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -33,7 +34,7 @@ class _MainScreenState extends State<MainScreen> {
       case 1:
         return const TransactionScreen();
       case 2:
-        return const Center(child: Text("Halaman Statistik"));
+        return const StatistikScreen();
       case 3:
         return const Center(child: Text("Halaman Budget"));
       default:
