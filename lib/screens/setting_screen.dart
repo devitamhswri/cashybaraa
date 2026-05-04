@@ -47,38 +47,70 @@ class SettingScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Tombol Edit di pojok kanan atas
-          Align(
-            alignment: Alignment.centerRight,
-            child: GestureDetector(
-              onTap: () {
-                // TODO: navigasi ke edit profil
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.edit_outlined, size: 13, color: Colors.white),
-                    SizedBox(width: 5),
-                    Text(
-                      'Edit',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+          // ── Back + Edit row ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Tombol Back
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.arrow_back_ios_rounded, size: 13, color: Colors.white),
+                      SizedBox(width: 4),
+                      Text(
+                        'Back',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
+
+              // Tombol Edit
+              GestureDetector(
+                onTap: () {
+                  // TODO: navigasi ke edit profil
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.edit_outlined, size: 13, color: Colors.white),
+                      SizedBox(width: 5),
+                      Text(
+                        'Edit',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
+
           const SizedBox(height: 12),
 
           // Avatar
@@ -117,6 +149,7 @@ class SettingScreen extends StatelessWidget {
               ),
             ],
           ),
+
           const SizedBox(height: 14),
 
           // Nama
@@ -171,7 +204,6 @@ class SettingScreen extends StatelessWidget {
         title: 'Beri Rating',
         subtitle: 'Bantu kami berkembang!',
         onTap: () {},
-        isLast: false,
       ),
       _MenuItem(
         icon: Icons.description_outlined,
@@ -272,7 +304,8 @@ class SettingScreen extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Text(
               'Keluar dari Akun?',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF2D2218)),
+              style: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF2D2218)),
             ),
             content: const Text(
               'Kamu akan keluar dari CashyBara.',
@@ -288,7 +321,9 @@ class SettingScreen extends StatelessWidget {
                   Navigator.pop(context);
                   // TODO: logika logout
                 },
-                child: const Text('Keluar', style: TextStyle(color: Color(0xFFE05555), fontWeight: FontWeight.w700)),
+                child: const Text('Keluar',
+                    style: TextStyle(
+                        color: Color(0xFFE05555), fontWeight: FontWeight.w700)),
               ),
             ],
           ),

@@ -4,6 +4,7 @@ import 'home_screen.dart';
 import 'transaction_screen.dart';
 import 'rincian_screen.dart';
 import 'statistik_screen.dart';
+import 'budget_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -36,7 +37,7 @@ class _MainScreenState extends State<MainScreen> {
       case 2:
         return const StatistikScreen();
       case 3:
-        return const Center(child: Text("Halaman Budget"));
+        return const BudgetScreen();
       default:
         return const SizedBox();
     }
