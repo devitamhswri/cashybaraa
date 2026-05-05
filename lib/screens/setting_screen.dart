@@ -55,16 +55,19 @@ class SettingScreen extends StatelessWidget {
               GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                    border: Border.all(
+                        color: Colors.white.withOpacity(0.3), width: 1),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.arrow_back_ios_rounded, size: 13, color: Colors.white),
+                      Icon(Icons.arrow_back_ios_rounded,
+                          size: 13, color: Colors.white),
                       SizedBox(width: 4),
                       Text(
                         'Back',
@@ -85,11 +88,13 @@ class SettingScreen extends StatelessWidget {
                   // TODO: navigasi ke edit profil
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                    border: Border.all(
+                        color: Colors.white.withOpacity(0.3), width: 1),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
@@ -122,7 +127,8 @@ class SettingScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8D5C0),
                   borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                  border: Border.all(
+                      color: Colors.white.withOpacity(0.3), width: 2),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
@@ -144,7 +150,8 @@ class SettingScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
                   ),
-                  child: const Icon(Icons.camera_alt_outlined, size: 12, color: Colors.white),
+                  child: const Icon(Icons.camera_alt_outlined,
+                      size: 12, color: Colors.white),
                 ),
               ),
             ],
@@ -301,11 +308,14 @@ class SettingScreen extends StatelessWidget {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Text(
               'Keluar dari Akun?',
               style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF2D2218)),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF2D2218)),
             ),
             content: const Text(
               'Kamu akan keluar dari CashyBara.',
@@ -314,7 +324,8 @@ class SettingScreen extends StatelessWidget {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Batal', style: TextStyle(color: Color(0xFF9E8F82))),
+                child: const Text('Batal',
+                    style: TextStyle(color: Color(0xFF9E8F82))),
               ),
               TextButton(
                 onPressed: () {
