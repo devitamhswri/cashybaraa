@@ -308,7 +308,7 @@ class SettingScreen extends StatelessWidget {
       onTap: () {
         showDialog(
           context: context,
-          builder: (_) => AlertDialog(
+          builder: (dialogContext) => AlertDialog(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Text(
@@ -324,23 +324,24 @@ class SettingScreen extends StatelessWidget {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Batal',
                     style: TextStyle(color: Color(0xFF9E8F82))),
               ),
               TextButton(
-  onPressed: () {
-    Navigator.pop(context);
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (route) => false,
-    );
-  },
-  child: const Text('Keluar',
-      style: TextStyle(
-          color: Color(0xFFE05555), fontWeight: FontWeight.w700)),
-),
+                onPressed: () {
+                  Navigator.pop(dialogContext); // tutup dialog dulu
+                  Navigator.pushAndRemoveUntil(
+                    context, // pakai context luar, bukan dialogContext
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                },
+                child: const Text('Keluar',
+                    style: TextStyle(
+                        color: Color(0xFFE05555),
+                        fontWeight: FontWeight.w700)),
+              ),
             ],
           ),
         );
