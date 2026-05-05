@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'login_screen.dart';
 
 class SettingScreen extends StatelessWidget {
   const SettingScreen({super.key});
@@ -328,14 +329,18 @@ class SettingScreen extends StatelessWidget {
                     style: TextStyle(color: Color(0xFF9E8F82))),
               ),
               TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  // TODO: logika logout
-                },
-                child: const Text('Keluar',
-                    style: TextStyle(
-                        color: Color(0xFFE05555), fontWeight: FontWeight.w700)),
-              ),
+  onPressed: () {
+    Navigator.pop(context);
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  },
+  child: const Text('Keluar',
+      style: TextStyle(
+          color: Color(0xFFE05555), fontWeight: FontWeight.w700)),
+),
             ],
           ),
         );
