@@ -9,9 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  provider: ^6.1.1 # Harus sejajar dengan kata 'flutter' di atasnya
-  google_fonts: ^6.2.1
-  flutter_svg: ^2.0.10+1
+  provider: ^6.1.2
+  firebase_core: ^2.32.0
+  firebase_auth: ^4.17.0
+  cloud_firestore: ^4.15.0
+  flutter_svg: ^2.0.0
+  google_sign_in: ^6.2.1
 
 dev_dependencies:
   flutter_test:

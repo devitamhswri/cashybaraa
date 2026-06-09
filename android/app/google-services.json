@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "158450643137",
+    "project_id": "cashybara-de0bb",
+    "storage_bucket": "cashybara-de0bb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:158450643137:android:f0cb3e845afd228bb2a440",
+        "android_client_info": {
+          "package_name": "com.example.cashybara"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "158450643137-vbnjrdv2i214c11tncev6usb9o3aa77t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.cashybara",
+            "certificate_hash": "74efd13157c814cddf3ff4b1e9a53edf133303ff"
+          }
+        },
+        {
+          "client_id": "158450643137-l2ddfjv2th9uogjtul2ins4ibfc26k8b.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAPgSYanhvlgK6fNil3DRlTVH9lOSvuEyU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "158450643137-l2ddfjv2th9uogjtul2ins4ibfc26k8b.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

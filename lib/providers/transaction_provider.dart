@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import '../services/firebase_service.dart';
 
 class TransactionItem {
+  final String id;
   final String title;
   final double amount;
-  final String tipe; // 'pengeluaran' atau 'pemasukan'
+  final String tipe;
   final String kategori;
+  final String categoryId;
   final String akun;
   final DateTime tanggal;
   final String notes;
@@ -12,10 +15,12 @@ class TransactionItem {
   final String time;
 
   TransactionItem({
+    this.id = '',
     required this.title,
     required this.amount,
     required this.tipe,
     required this.kategori,
+    this.categoryId = '',
     required this.akun,
     required this.tanggal,
     this.notes = '',
@@ -26,20 +31,9 @@ class TransactionItem {
 
 class TransactionProvider with ChangeNotifier {
   final List<TransactionItem> _items = [];
+  bool isLoading = false;
 
   List<TransactionItem> get items => List.unmodifiable(_items);
-
-  // ── GETTER SALDO ────────────────────────────────────────────────────────────
-
-  double get totalBalance => _items.fold(0, (sum, t) => sum + t.amount);
-
-  double get bcaBalance => _items
-      .where((t) => t.akun == 'Bank BCA')
-      .fold(0, (sum, t) => sum + t.amount);
-
-  double get cashBalance => _items
-      .where((t) => t.akun == 'Uang Tunai')
-      .fold(0, (sum, t) => sum + t.amount);
 
   // ── FILTER ─────────────────────────────────────────────────────────────────
 
@@ -50,7 +44,7 @@ class TransactionProvider with ChangeNotifier {
           t.tanggal.day == day.day)
       .toList();
 
-  List<TransactionItem> getByMonth(int year, int month) => _items
+  List<TransactionItem> getByMonthLocal(int year, int month) => _items
       .where((t) => t.tanggal.year == year && t.tanggal.month == month)
       .toList();
 
@@ -59,67 +53,119 @@ class TransactionProvider with ChangeNotifier {
       .map((t) => t.tanggal.day)
       .toSet();
 
-  // ── TAMBAH TRANSAKSI ────────────────────────────────────────────────────────
+  // ── GETTER BALANCE (kompatibilitas income_card.dart) ───────────────────────
 
-  void addTransactionFull({
+  double get totalBalance => _items.fold(0, (sum, t) {
+        if (t.tipe == 'pemasukan' || t.tipe == 'income') return sum + t.amount;
+        return sum - t.amount;
+      });
+
+  double get bcaBalance => _items
+      .where((t) => t.akun.toLowerCase().contains('bca'))
+      .fold(0, (sum, t) {
+        if (t.tipe == 'pemasukan' || t.tipe == 'income') return sum + t.amount;
+        return sum - t.amount;
+      });
+
+  double get cashBalance => _items
+      .where((t) =>
+          t.akun.toLowerCase().contains('tunai') ||
+          t.akun.toLowerCase().contains('cash'))
+      .fold(0, (sum, t) {
+        if (t.tipe == 'pemasukan' || t.tipe == 'income') return sum + t.amount;
+        return sum - t.amount;
+      });
+
+  // ── LOAD DARI FIREBASE ──────────────────────────────────────────────────────
+
+  Future<void> loadMonth(int year, int month) async {
+    isLoading = true;
+    notifyListeners();
+
+    try {
+      final cats = await FirebaseService.getCategories();
+      final catMap = <String, Map<String, String>>{};
+      for (final c in cats) {
+        catMap[c['id']] = {
+          'name': c['name'] ?? '',
+          'icon': c['icon'] ?? '💰',
+        };
+      }
+
+      final txs =
+          await FirebaseService.getTransactions(month: month, year: year);
+
+      _items.clear();
+      for (final t in txs) {
+        final catId = t['category_id'] ?? '';
+        final catData = catMap[catId];
+        final tanggal =
+            DateTime.tryParse(t['date'] ?? '') ?? DateTime.now();
+        final now = DateTime.now();
+
+        _items.add(TransactionItem(
+          id: t['id'] ?? '',
+          title: (t['note'] != null && t['note'].toString().isNotEmpty)
+              ? t['note']
+              : (catData?['name'] ?? 'Transaksi'),
+          amount: (t['amount'] as num).toDouble(),
+          tipe: t['type'] == 'income' ? 'pemasukan' : 'pengeluaran',
+          kategori: catData?['name'] ?? '',
+          categoryId: catId,
+          akun: t['akun'] ?? '',
+          tanggal: tanggal,
+          notes: t['note'] ?? '',
+          iconEmoji: catData?['icon'] ?? '💰',
+          time:
+              '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
+        ));
+      }
+    } catch (e) {
+      debugPrint('TransactionProvider loadMonth error: $e');
+    }
+
+    isLoading = false;
+    notifyListeners();
+  }
+
+  // ── TAMBAH → FIREBASE ───────────────────────────────────────────────────────
+
+  Future<void> addTransactionFull({
     required String title,
     required double amount,
     required String tipe,
     required String kategori,
+    required String categoryId,
     required String akun,
     required DateTime tanggal,
     String notes = '',
-  }) {
-    final now = DateTime.now();
-    final time =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    required VoidCallback onSuccess,
+  }) async {
+    try {
+      final type = (tipe == 'pemasukan') ? 'income' : 'expense';
+      final dateStr =
+          '${tanggal.year}-${tanggal.month.toString().padLeft(2, '0')}-${tanggal.day.toString().padLeft(2, '0')}';
 
-    _items.insert(
-      0,
-      TransactionItem(
-        title: title,
-        amount: amount,
-        tipe: tipe,
-        kategori: kategori,
-        akun: akun,
-        tanggal: tanggal,
-        notes: notes,
-        iconEmoji: _emojiKategori(kategori),
-        time: time,
-      ),
-    );
-    notifyListeners();
+      await FirebaseService.addTransaction({
+        'category_id': categoryId,
+        'type': type,
+        'amount': amount.toInt(),
+        'date': dateStr,
+        'note': notes.isNotEmpty ? notes : title,
+        'akun': akun,
+      });
+
+      await loadMonth(tanggal.year, tanggal.month);
+      onSuccess();
+    } catch (e) {
+      debugPrint('addTransactionFull error: $e');
+    }
   }
 
-  // Fungsi lama untuk kompatibilitas income_card.dart
-  void addTransaction(String title, double amount, IconData icon,
-      {String account = 'BCA'}) {
-    final now = DateTime.now();
-    _items.insert(
-      0,
-      TransactionItem(
-        title: title,
-        amount: amount,
-        tipe: 'pengeluaran',
-        kategori: 'Lainnya',
-        akun: account == 'BCA' ? 'Bank BCA' : 'Uang Tunai',
-        tanggal: now,
-        time:
-            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
-      ),
-    );
-    notifyListeners();
-  }
+  // ── DELETE ──────────────────────────────────────────────────────────────────
 
-  String _emojiKategori(String kategori) {
-    const map = {
-      'Makanan dan Minuman': '🍔',
-      'Transportasi': '🚗',
-      'Biaya Utilitas': '🏠',
-      'Belanja': '🛍',
-      'Kesehatan': '❤️',
-      'Perawatan': '💆',
-    };
-    return map[kategori] ?? '💰';
+  Future<void> deleteTransaction(String id, DateTime tanggal) async {
+    await FirebaseService.deleteTransaction(id);
+    await loadMonth(tanggal.year, tanggal.month);
   }
 }

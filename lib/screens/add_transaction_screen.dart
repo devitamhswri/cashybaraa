@@ -14,14 +14,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   static const Color kBrown = Color(0xFF4A3728);
   static const Color kBrownLight = Color(0xFF9E8F82);
 
-  // Form state
-  String _tipe = 'pengeluaran'; // atau 'pemasukan'
+  String _tipe = 'pengeluaran';
   DateTime _tanggal = DateTime.now();
-  String? _kategori;
+  String? _kategoriNama;
+  String? _kategoriId;   // ← kirim ke Firebase
   String? _akun;
   final _namaController = TextEditingController();
   final _biayaController = TextEditingController();
   final _notesController = TextEditingController();
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -32,8 +33,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   String _formatTanggal(DateTime d) {
-    final bulan = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-        'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'][d.month];
+    final bulan = ['','Jan','Feb','Mar','Apr','Mei','Jun',
+        'Jul','Agu','Sep','Okt','Nov','Des'][d.month];
     return '${d.day} $bulan ${d.year}';
   }
 
@@ -53,38 +54,43 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (picked != null) setState(() => _tanggal = picked);
   }
 
-  void _simpan() {
+  Future<void> _simpan() async {
     if (_namaController.text.trim().isEmpty) {
-      _showSnack('Nama transaksi tidak boleh kosong');
-      return;
+      _showSnack('Nama transaksi tidak boleh kosong'); return;
     }
-    if (_kategori == null) {
-      _showSnack('Pilih kategori dulu');
-      return;
+    if (_kategoriId == null) {
+      _showSnack('Pilih kategori dulu'); return;
     }
     if (_akun == null) {
-      _showSnack('Pilih akun dulu');
-      return;
+      _showSnack('Pilih akun dulu'); return;
     }
     final biaya = double.tryParse(
       _biayaController.text.replaceAll('.', '').replaceAll(',', '.'),
     );
     if (biaya == null || biaya <= 0) {
-      _showSnack('Masukkan biaya yang valid');
-      return;
+      _showSnack('Masukkan biaya yang valid'); return;
     }
 
-    context.read<TransactionProvider>().addTransactionFull(
+    setState(() => _isSaving = true);
+
+    final appState = context.read<AppState>();
+
+    await context.read<TransactionProvider>().addTransactionFull(
       title: _namaController.text.trim(),
       amount: biaya,
       tipe: _tipe,
-      kategori: _kategori!,
+      kategori: _kategoriNama!,
+      categoryId: _kategoriId!,   // ← penting untuk Firebase
       akun: _akun!,
       tanggal: _tanggal,
       notes: _notesController.text.trim(),
+      onSuccess: () {
+        // Refresh AppState supaya home screen ikut update
+        appState.loadData();
+      },
     );
 
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 
   void _showSnack(String msg) {
@@ -96,7 +102,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final kategoriList = state.categories.map((c) => c.name).toList();
+
+    // Pakai objek lengkap supaya bisa ambil id
+    final kategoriList = state.categories;
     final akunList = state.akunList.map((a) => a.nama).toList();
 
     return Scaffold(
@@ -113,11 +121,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           child: const Icon(Icons.close),
         ),
         actions: [
-          TextButton(
-            onPressed: _simpan,
-            child: const Text('Simpan',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-          ),
+          _isSaving
+              ? const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: SizedBox(
+                      width: 18, height: 18,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)))
+              : TextButton(
+                  onPressed: _simpan,
+                  child: const Text('Simpan',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                ),
         ],
       ),
       body: SingleChildScrollView(
@@ -125,7 +139,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── TIPE ──────────────────────────────────────────────────────────
+            // TIPE
             _buildCard(
               child: Row(
                 children: [
@@ -137,44 +151,49 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ── TANGGAL ────────────────────────────────────────────────────────
+            // TANGGAL
             _buildCard(
               child: _buildRow(
                 icon: Icons.calendar_today_outlined,
                 label: 'Tanggal',
                 child: GestureDetector(
                   onTap: _pickDate,
-                  child: Text(
-                    _formatTanggal(_tanggal),
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600, color: kBrown),
-                  ),
+                  child: Text(_formatTanggal(_tanggal),
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600, color: kBrown)),
                 ),
               ),
             ),
             const SizedBox(height: 12),
 
-            // ── KATEGORI ───────────────────────────────────────────────────────
+            // KATEGORI — pakai id bukan hanya nama
             _buildCard(
               child: _buildRow(
                 icon: Icons.grid_view_rounded,
                 label: 'Kategori',
                 child: DropdownButton<String>(
-                  value: _kategori,
+                  value: _kategoriId,
                   hint: const Text('Pilih kategori',
                       style: TextStyle(fontSize: 13, color: Color(0xFFBDB0A6))),
                   underline: const SizedBox(),
                   isDense: true,
-                  items: kategoriList
-                      .map((k) => DropdownMenuItem(value: k, child: Text(k, style: const TextStyle(fontSize: 13))))
-                      .toList(),
-                  onChanged: (v) => setState(() => _kategori = v),
+                  items: kategoriList.map((k) => DropdownMenuItem(
+                    value: k.id,
+                    child: Text(k.name, style: const TextStyle(fontSize: 13)),
+                  )).toList(),
+                  onChanged: (v) {
+                    final cat = kategoriList.firstWhere((k) => k.id == v);
+                    setState(() {
+                      _kategoriId   = v;
+                      _kategoriNama = cat.name;
+                    });
+                  },
                 ),
               ),
             ),
             const SizedBox(height: 12),
 
-            // ── AKUN ───────────────────────────────────────────────────────────
+            // AKUN
             _buildCard(
               child: _buildRow(
                 icon: Icons.account_balance_wallet_outlined,
@@ -185,8 +204,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       style: TextStyle(fontSize: 13, color: Color(0xFFBDB0A6))),
                   underline: const SizedBox(),
                   isDense: true,
-                  items: akunList
-                      .map((a) => DropdownMenuItem(value: a, child: Text(a, style: const TextStyle(fontSize: 13))))
+                  items: akunList.map((a) =>
+                      DropdownMenuItem(value: a, child: Text(a, style: const TextStyle(fontSize: 13))))
                       .toList(),
                   onChanged: (v) => setState(() => _akun = v),
                 ),
@@ -194,7 +213,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ── NAMA TRANSAKSI ─────────────────────────────────────────────────
+            // NAMA
             _buildCard(
               child: _buildRow(
                 icon: Icons.edit_outlined,
@@ -206,8 +225,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     decoration: const InputDecoration(
                       hintText: 'cth: Makan siang',
                       hintStyle: TextStyle(fontSize: 13, color: Color(0xFFBDB0A6)),
-                      border: InputBorder.none,
-                      isDense: true,
+                      border: InputBorder.none, isDense: true,
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -216,7 +234,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ── BIAYA ──────────────────────────────────────────────────────────
+            // BIAYA
             _buildCard(
               child: _buildRow(
                 icon: Icons.payments_outlined,
@@ -227,11 +245,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     keyboardType: TextInputType.number,
                     style: const TextStyle(fontSize: 13),
                     decoration: const InputDecoration(
-                      hintText: '0',
-                      prefixText: 'Rp ',
+                      hintText: '0', prefixText: 'Rp ',
                       hintStyle: TextStyle(fontSize: 13, color: Color(0xFFBDB0A6)),
-                      border: InputBorder.none,
-                      isDense: true,
+                      border: InputBorder.none, isDense: true,
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -240,16 +256,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ── NOTES ──────────────────────────────────────────────────────────
+            // NOTES
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  const Row(
                     children: [
-                      const Icon(Icons.notes_outlined, size: 18, color: kBrownLight),
-                      const SizedBox(width: 10),
-                      const Text('Notes', style: TextStyle(fontSize: 12, color: kBrownLight)),
+                      Icon(Icons.notes_outlined, size: 18, color: kBrownLight),
+                      SizedBox(width: 10),
+                      Text('Notes', style: TextStyle(fontSize: 12, color: kBrownLight)),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -260,39 +276,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     decoration: const InputDecoration(
                       hintText: 'Tambahkan catatan...',
                       hintStyle: TextStyle(fontSize: 13, color: Color(0xFFBDB0A6)),
-                      border: InputBorder.none,
-                      isDense: true,
+                      border: InputBorder.none, isDense: true,
                       contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // ── UPLOAD GAMBAR ──────────────────────────────────────────────────
-            _buildCard(
-              child: Row(
-                children: [
-                  const Icon(Icons.image_outlined, size: 18, color: kBrownLight),
-                  const SizedBox(width: 10),
-                  const Text('Foto / Struk', style: TextStyle(fontSize: 12, color: kBrownLight)),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () {
-                      // TODO: image picker
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Fitur upload foto segera hadir!')),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: kBrown,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text('Pilih Foto',
-                          style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600)),
                     ),
                   ),
                 ],
@@ -300,19 +285,23 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 24),
 
-            // ── TOMBOL SIMPAN ──────────────────────────────────────────────────
+            // SIMPAN
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _simpan,
+                onPressed: _isSaving ? null : _simpan,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kBrown,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   elevation: 0,
                 ),
-                child: const Text('Simpan Transaksi',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 20, height: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Simpan Transaksi',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
               ),
             ),
             const SizedBox(height: 24),
@@ -329,7 +318,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
+          color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? color : const Color(0xFFE0D6CC),
@@ -337,14 +326,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           ),
         ),
         child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isSelected ? color : const Color(0xFF9E8F82),
-            ),
-          ),
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? color : const Color(0xFF9E8F82))),
         ),
       ),
     );
@@ -356,17 +342,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withOpacity(0.05), width: 0.5),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05), width: 0.5),
       ),
       child: child,
     );
   }
 
-  Widget _buildRow({
-    required IconData icon,
-    required String label,
-    required Widget child,
-  }) {
+  Widget _buildRow({required IconData icon, required String label, required Widget child}) {
     return Row(
       children: [
         Icon(icon, size: 18, color: kBrownLight),
