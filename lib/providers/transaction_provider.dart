@@ -61,17 +61,17 @@ class TransactionProvider with ChangeNotifier {
       });
 
   double get bcaBalance => _items
-      .where((t) => t.akun.toLowerCase().contains('bca'))
-      .fold(0, (sum, t) {
+          .where((t) => t.akun.toLowerCase().contains('bca'))
+          .fold(0, (sum, t) {
         if (t.tipe == 'pemasukan' || t.tipe == 'income') return sum + t.amount;
         return sum - t.amount;
       });
 
   double get cashBalance => _items
-      .where((t) =>
-          t.akun.toLowerCase().contains('tunai') ||
-          t.akun.toLowerCase().contains('cash'))
-      .fold(0, (sum, t) {
+          .where((t) =>
+              t.akun.toLowerCase().contains('tunai') ||
+              t.akun.toLowerCase().contains('cash'))
+          .fold(0, (sum, t) {
         if (t.tipe == 'pemasukan' || t.tipe == 'income') return sum + t.amount;
         return sum - t.amount;
       });
@@ -99,8 +99,7 @@ class TransactionProvider with ChangeNotifier {
       for (final t in txs) {
         final catId = t['category_id'] ?? '';
         final catData = catMap[catId];
-        final tanggal =
-            DateTime.tryParse(t['date'] ?? '') ?? DateTime.now();
+        final tanggal = DateTime.tryParse(t['date'] ?? '') ?? DateTime.now();
         final now = DateTime.now();
 
         _items.add(TransactionItem(
@@ -146,6 +145,7 @@ class TransactionProvider with ChangeNotifier {
       final dateStr =
           '${tanggal.year}-${tanggal.month.toString().padLeft(2, '0')}-${tanggal.day.toString().padLeft(2, '0')}';
 
+      // 1. Simpan transaksi ke Firestore
       await FirebaseService.addTransaction({
         'category_id': categoryId,
         'type': type,
@@ -155,6 +155,22 @@ class TransactionProvider with ChangeNotifier {
         'akun': akun,
       });
 
+      // 2. Update saldo akun di Firestore
+      final akunList = await FirebaseService.getAkun();
+      final akunData = akunList.firstWhere(
+        (a) => (a['nama'] ?? a['name'] ?? '') == akun,
+        orElse: () => {},
+      );
+      if (akunData.isNotEmpty) {
+        final akunId = akunData['id'] as String;
+        final saldoLama = (akunData['saldo'] as num?)?.toInt() ?? 0;
+        final saldoBaru = type == 'expense'
+            ? saldoLama - amount.toInt()
+            : saldoLama + amount.toInt();
+        await FirebaseService.updateSaldoAkun(akunId, saldoBaru);
+      }
+
+      // 3. Reload tampilan transaksi & trigger home refresh
       await loadMonth(tanggal.year, tanggal.month);
       onSuccess();
     } catch (e) {

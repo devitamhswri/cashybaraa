@@ -3,286 +3,30 @@ import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'setting_screen.dart';
 import 'rincian_screen.dart';
+import 'category_detail_screen.dart';
 
-const Color kBrown = Color(0xFF4A3728);
+const Color kBrown      = Color(0xFF4A3728);
 const Color kBrownLight = Color(0xFF9E8F82);
-const Color kBg = Color(0xFFF5F0EA);
+const Color kBg         = Color(0xFFF5F0EA);
 
-// ── DUMMY TRANSAKSI PER KATEGORI ──────────────────────────────────────────────
-
-class TxItem {
-  final String note;
-  final int amount;
-  final DateTime date;
-  const TxItem({required this.note, required this.amount, required this.date});
-}
-
-final Map<String, List<TxItem>> dummyTx = {
-  '1': [
-    TxItem(
-        note: 'Makan siang warteg', amount: 25000, date: DateTime(2025, 4, 15)),
-    TxItem(note: 'Kopi Kenangan', amount: 35000, date: DateTime(2025, 4, 14)),
-    TxItem(note: 'Indomaret snack', amount: 45000, date: DateTime(2025, 4, 13)),
-    TxItem(note: 'Ayam geprek', amount: 30000, date: DateTime(2025, 4, 12)),
-    TxItem(note: 'Boba drink', amount: 32000, date: DateTime(2025, 4, 11)),
-    TxItem(
-        note: 'Sarapan nasi uduk', amount: 18000, date: DateTime(2025, 4, 10)),
-    TxItem(note: 'McD dinner', amount: 85000, date: DateTime(2025, 4, 9)),
-    TxItem(note: 'Es teh manis', amount: 8000, date: DateTime(2025, 4, 8)),
-  ],
-  '2': [
-    TxItem(note: 'Grab ke kantor', amount: 45000, date: DateTime(2025, 4, 15)),
-    TxItem(note: 'Bensin motor', amount: 80000, date: DateTime(2025, 4, 13)),
-    TxItem(note: 'Parkir mall', amount: 5000, date: DateTime(2025, 4, 10)),
-    TxItem(note: 'Tol Cipali', amount: 46000, date: DateTime(2025, 4, 8)),
-  ],
-  '3': [
-    TxItem(note: 'Token listrik', amount: 50000, date: DateTime(2025, 4, 10)),
-    TxItem(note: 'Air PDAM', amount: 39000, date: DateTime(2025, 4, 5)),
-  ],
-  '4': [
-    TxItem(note: 'Baju H&M', amount: 259000, date: DateTime(2025, 4, 9)),
-    TxItem(note: 'Sandal baru', amount: 85000, date: DateTime(2025, 4, 3)),
-  ],
-  '5': [
-    TxItem(
-        note: 'Paracetamol apotek', amount: 25000, date: DateTime(2025, 4, 7)),
-    TxItem(note: 'Vitamin C', amount: 37500, date: DateTime(2025, 4, 2)),
-  ],
-  '6': [],
-};
-
-// ── CATEGORY TRANSACTION BOTTOM SHEET ────────────────────────────────────────
-
-void showCategoryTransactions(
-    BuildContext context, CategoryData cat, int totalSaldo) {
-  final txList = dummyTx[cat.id] ?? [];
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) =>
-        _CategoryTxSheet(cat: cat, txList: txList, totalSaldo: totalSaldo),
-  );
-}
-
-class _CategoryTxSheet extends StatelessWidget {
-  final CategoryData cat;
-  final List<TxItem> txList;
-  final int totalSaldo;
-
-  const _CategoryTxSheet({
-    required this.cat,
-    required this.txList,
-    required this.totalSaldo,
-  });
-
-  String _rp(int n) {
-    if (n == 0) return 'Rp 0';
-    final formatted = n.toString().replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.');
-    return 'Rp $formatted';
-  }
-
-  String _date(DateTime d) {
-    const mo = [
-      '',
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'Mei',
-      'Jun',
-      'Jul',
-      'Ags',
-      'Sep',
-      'Okt',
-      'Nov',
-      'Des'
-    ];
-    return '${d.day} ${mo[d.month]} ${d.year}';
-  }
-
-  String _mon(int m) {
-    const mo = [
-      '',
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'Mei',
-      'Jun',
-      'Jul',
-      'Ags',
-      'Sep',
-      'Okt',
-      'Nov',
-      'Des'
-    ];
-    return mo[m];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = cat.pct(totalSaldo);
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(children: [
-        // Handle
-        Container(
-          margin: const EdgeInsets.only(top: 10),
-          width: 36,
-          height: 4,
-          decoration: BoxDecoration(
-              color: const Color(0xFFE0D6CC),
-              borderRadius: BorderRadius.circular(2)),
-        ),
-
-        // Header
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-          child: Row(children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                  color: cat.bg, borderRadius: BorderRadius.circular(14)),
-              child: Center(
-                  child: Text(cat.icon, style: const TextStyle(fontSize: 22))),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text(cat.name,
-                      style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF2D2218))),
-                  Text('$pct% dari total saldo',
-                      style: const TextStyle(fontSize: 11, color: kBrownLight)),
-                ])),
-            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text(_rp(cat.amount),
-                  style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF2D2218))),
-              Text('${txList.length} transaksi',
-                  style: const TextStyle(fontSize: 11, color: kBrownLight)),
-            ]),
-          ]),
-        ),
-
-        // Progress bar
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: (pct / 100).clamp(0.0, 1.0),
-              minHeight: 6,
-              backgroundColor: const Color(0xFFF0E9E2),
-              valueColor: AlwaysStoppedAnimation<Color>(cat.color),
-            ),
-          ),
-        ),
-
-        const Divider(height: 1, color: Color(0xFFF0E9E2)),
-
-        // List transaksi
-        Expanded(
-          child: txList.isEmpty
-              ? Center(
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Text(cat.icon, style: const TextStyle(fontSize: 48)),
-                    const SizedBox(height: 12),
-                    const Text('Belum ada transaksi',
-                        style: TextStyle(fontSize: 14, color: kBrownLight)),
-                    const SizedBox(height: 4),
-                    const Text('Kategori ini masih kosong bulan ini',
-                        style: TextStyle(fontSize: 12, color: kBrownLight)),
-                  ]),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                  itemCount: txList.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(height: 1, color: Color(0xFFF5F0EA)),
-                  itemBuilder: (_, i) {
-                    final t = txList[i];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Row(children: [
-                        // Tanggal badge
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F0EA),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text('${t.date.day}',
-                                    style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                        color: kBrown)),
-                                Text(_mon(t.date.month),
-                                    style: const TextStyle(
-                                        fontSize: 9, color: kBrownLight)),
-                              ]),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // Note
-                        Expanded(
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                              Text(t.note,
-                                  style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF2D2218))),
-                              const SizedBox(height: 2),
-                              Text(_date(t.date),
-                                  style: const TextStyle(
-                                      fontSize: 11, color: kBrownLight)),
-                            ])),
-
-                        // Amount
-                        Text('-${_rp(t.amount)}',
-                            style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFFEF5350))),
-                      ]),
-                    );
-                  },
-                ),
-        ),
-      ]),
-    );
-  }
-}
+const List<String> _bulanNames = [
+  '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
 
 // ── ADD CATEGORY MODAL ────────────────────────────────────────────────────────
 
 class AddCategoryModal extends StatefulWidget {
   final VoidCallback onClose;
   final void Function(CategoryData) onAdd;
+  final String type;
 
-  const AddCategoryModal(
-      {super.key, required this.onClose, required this.onAdd});
+  const AddCategoryModal({
+    super.key,
+    required this.onClose,
+    required this.onAdd,
+    this.type = 'expense',
+  });
 
   @override
   State<AddCategoryModal> createState() => _AddCategoryModalState();
@@ -290,17 +34,18 @@ class AddCategoryModal extends StatefulWidget {
 
 class _AddCategoryModalState extends State<AddCategoryModal> {
   final TextEditingController _nameController = TextEditingController();
-  String _selectedIcon = iconOptions[0];
-  _ColorScheme _selectedScheme = colorSchemes[0];
+  String _selectedIcon = _iconOptions[0];
+  _ColorScheme _selectedScheme = _colorSchemes[0];
 
   void _handleSubmit() {
     if (_nameController.text.trim().isEmpty) return;
     widget.onAdd(CategoryData(
-      id: '${DateTime.now().millisecondsSinceEpoch}', // String ID
+      id: '${DateTime.now().millisecondsSinceEpoch}',
       name: _nameController.text.trim(),
       icon: _selectedIcon,
       bg: _selectedScheme.bg,
       color: _selectedScheme.color,
+      type: widget.type,
     ));
     widget.onClose();
   }
@@ -313,6 +58,7 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
 
   @override
   Widget build(BuildContext context) {
+    final isIncome = widget.type == 'income';
     return GestureDetector(
       onTap: widget.onClose,
       child: Container(
@@ -335,102 +81,67 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Tambah Kategori',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF2D2218))),
+                      Text(
+                        isIncome ? 'Tambah Sumber Pemasukan' : 'Tambah Kategori',
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF2D2218)),
+                      ),
                       GestureDetector(
                           onTap: widget.onClose,
-                          child: const Icon(Icons.close,
-                              size: 20, color: Color(0xFF9E8F82))),
+                          child: const Icon(Icons.close, size: 20, color: Color(0xFF9E8F82))),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text('Nama Kategori',
-                      style: TextStyle(fontSize: 11, color: kBrownLight)),
+                  const Text('Nama', style: TextStyle(fontSize: 11, color: kBrownLight)),
                   const SizedBox(height: 4),
                   TextField(
                     controller: _nameController,
                     style: const TextStyle(fontSize: 13),
                     decoration: InputDecoration(
-                      hintText: 'cth: Hiburan',
-                      hintStyle: const TextStyle(
-                          fontSize: 13, color: Color(0xFFCCC0B4)),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 9),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFE0D6CC))),
-                      enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                              const BorderSide(color: Color(0xFFE0D6CC))),
-                      focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: kBrown)),
+                      hintText: isIncome ? 'cth: Gaji, Freelance...' : 'cth: Hiburan',
+                      hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFCCC0B4)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0D6CC))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0D6CC))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kBrown)),
                     ),
                   ),
                   const SizedBox(height: 14),
-                  const Text('Pilih Ikon',
-                      style: TextStyle(fontSize: 11, color: kBrownLight)),
+                  const Text('Pilih Ikon', style: TextStyle(fontSize: 11, color: kBrownLight)),
                   const SizedBox(height: 6),
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: iconOptions.map((ic) {
+                    spacing: 8, runSpacing: 8,
+                    children: _iconOptions.map((ic) {
                       final selected = _selectedIcon == ic;
                       return GestureDetector(
                         onTap: () => setState(() => _selectedIcon = ic),
                         child: Container(
-                          width: 36,
-                          height: 36,
+                          width: 36, height: 36,
                           decoration: BoxDecoration(
-                            color: selected
-                                ? const Color(0xFFF5F0EA)
-                                : Colors.white,
+                            color: selected ? const Color(0xFFF5F0EA) : Colors.white,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                                color:
-                                    selected ? kBrown : const Color(0xFFE0D6CC),
-                                width: selected ? 2 : 1.5),
+                            border: Border.all(color: selected ? kBrown : const Color(0xFFE0D6CC), width: selected ? 2 : 1.5),
                           ),
-                          child: Center(
-                              child: Text(ic,
-                                  style: const TextStyle(fontSize: 17))),
+                          child: Center(child: Text(ic, style: const TextStyle(fontSize: 17))),
                         ),
                       );
                     }).toList(),
                   ),
                   const SizedBox(height: 14),
-                  const Text('Warna',
-                      style: TextStyle(fontSize: 11, color: kBrownLight)),
+                  const Text('Warna', style: TextStyle(fontSize: 11, color: kBrownLight)),
                   const SizedBox(height: 6),
                   Row(
-                    children: colorSchemes.map((s) {
+                    children: _colorSchemes.map((s) {
                       final selected = _selectedScheme == s;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: GestureDetector(
                           onTap: () => setState(() => _selectedScheme = s),
                           child: Container(
-                            width: 26,
-                            height: 26,
+                            width: 26, height: 26,
                             decoration: BoxDecoration(
-                              color: s.color,
-                              shape: BoxShape.circle,
-                              border: selected
-                                  ? Border.all(color: Colors.white, width: 2)
-                                  : null,
-                              boxShadow: selected
-                                  ? [
-                                      BoxShadow(
-                                          color: s.color.withValues(alpha: 0.7),
-                                          blurRadius: 0,
-                                          spreadRadius: 2)
-                                    ]
-                                  : null,
+                              color: s.color, shape: BoxShape.circle,
+                              border: selected ? Border.all(color: Colors.white, width: 2) : null,
+                              boxShadow: selected ? [BoxShadow(color: s.color.withValues(alpha: 0.7), blurRadius: 0, spreadRadius: 2)] : null,
                             ),
                           ),
                         ),
@@ -445,15 +156,10 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: kBrown,
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
                       ),
-                      child: const Text('Tambah',
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white)),
+                      child: const Text('Tambah', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
                     ),
                   ),
                 ],
@@ -466,22 +172,9 @@ class _AddCategoryModalState extends State<AddCategoryModal> {
   }
 }
 
-const List<String> iconOptions = [
-  '🍔',
-  '🚗',
-  '🏠',
-  '🛍',
-  '❤️',
-  '💆',
-  '🎓',
-  '✈️',
-  '🎮',
-  '💡',
-  '🐶',
-  '📱',
-  '🎵',
-  '💪',
-  '🧴'
+const List<String> _iconOptions = [
+  '🍔','🚗','🏠','🛍','❤️','💆','🎓','✈️','🎮','💡','🐶','📱','🎵','💪','🧴',
+  '💼','💰','🏦','📈','🎁','🔧','🌐','🏋️','🎯','🧾',
 ];
 
 class _ColorScheme {
@@ -490,7 +183,7 @@ class _ColorScheme {
   const _ColorScheme(this.bg, this.color);
 }
 
-const List<_ColorScheme> colorSchemes = [
+const List<_ColorScheme> _colorSchemes = [
   _ColorScheme(Color(0xFFFFF3E0), Color(0xFFF4A03A)),
   _ColorScheme(Color(0xFFE3F2FD), Color(0xFF42A5F5)),
   _ColorScheme(Color(0xFFE8F5E9), Color(0xFF66BB6A)),
@@ -499,52 +192,138 @@ const List<_ColorScheme> colorSchemes = [
   _ColorScheme(Color(0xFFF3E5F5), Color(0xFFAB47BC)),
   _ColorScheme(Color(0xFFE8EAF6), Color(0xFF5C6BC0)),
   _ColorScheme(Color(0xFFE0F7FA), Color(0xFF00ACC1)),
+  _ColorScheme(Color(0xFFE0F2F1), Color(0xFF26A69A)),
 ];
 
 // ── HOME SCREEN ───────────────────────────────────────────────────────────────
 
 class HomeScreen extends StatefulWidget {
-  final VoidCallback? onRincian;
-  const HomeScreen({super.key, this.onRincian});
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  bool _showModal = false;
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  String? _modalType;
+  late TabController _tabController;
 
-  String _formatRp(int num) {
-    final s = num.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (m) => '${m[1]}.',
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _pickMonth(BuildContext context, AppState state) {
+    final now = DateTime.now();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        int tempMonth = state.selectedMonth;
+        int tempYear  = state.selectedYear;
+        return StatefulBuilder(builder: (ctx, setModal) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Pilih Bulan', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF2D2218))),
+                    GestureDetector(onTap: () => Navigator.pop(ctx), child: const Icon(Icons.close, size: 20, color: kBrownLight)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GestureDetector(onTap: () => setModal(() => tempYear--), child: const Icon(Icons.chevron_left, color: kBrown)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text('$tempYear', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: kBrown)),
+                    ),
+                    GestureDetector(
+                      onTap: () { if (tempYear < now.year) setModal(() => tempYear++); },
+                      child: Icon(Icons.chevron_right, color: tempYear < now.year ? kBrown : kBrownLight),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                GridView.count(
+                  crossAxisCount: 4, shrinkWrap: true, childAspectRatio: 2.2,
+                  mainAxisSpacing: 8, crossAxisSpacing: 8,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: List.generate(12, (i) {
+                    final m = i + 1;
+                    final isSelected = m == tempMonth && tempYear == state.selectedYear;
+                    final isFuture = tempYear == now.year && m > now.month;
+                    return GestureDetector(
+                      onTap: isFuture ? null : () => setModal(() => tempMonth = m),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: isSelected ? kBrown : (isFuture ? const Color(0xFFF5F0EA) : const Color(0xFFF0EBE4)),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(child: Text(
+                          _bulanNames[m].substring(0, 3),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                              color: isSelected ? Colors.white : (isFuture ? kBrownLight : kBrown)),
+                        )),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () { Navigator.pop(ctx); state.setMonth(tempMonth, tempYear); },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kBrown,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
+                    ),
+                    child: const Text('Terapkan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        });
+      },
     );
-    return 'Rp $s';
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(
       builder: (context, state, _) {
-        final totalSaldo = state.totalSaldo;
-        final totalPengeluaran =
-            state.categories.fold(0, (sum, c) => sum + c.amount);
-
         return Scaffold(
           backgroundColor: kBg,
           body: Stack(
             children: [
               Column(children: [
-                _buildHeader(state, totalSaldo, totalPengeluaran),
-                _buildBody(context, state, totalSaldo),
+                _buildHeader(context, state),
+                _buildTabs(context, state),
               ]),
-              if (_showModal)
+              if (_modalType != null)
                 AddCategoryModal(
-                  onClose: () => setState(() => _showModal = false),
-                  onAdd: (cat) {
-                    state.tambahCategory(cat);
-                    setState(() => _showModal = false);
-                  },
+                  type: _modalType!,
+                  onClose: () => setState(() => _modalType = null),
+                  onAdd: (cat) { state.tambahCategory(cat); setState(() => _modalType = null); },
                 ),
             ],
           ),
@@ -553,158 +332,110 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(AppState state, int totalSaldo, int totalPengeluaran) {
+  Widget _buildHeader(BuildContext context, AppState state) {
+    final bulanLabel = '${_bulanNames[state.selectedMonth]} ${state.selectedYear}';
     return Container(
       color: kBrown,
-      padding: EdgeInsets.fromLTRB(
-          20, MediaQuery.of(context).padding.top + 16, 20, 28),
+      padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 16, 20, 20),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-              decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20)),
-              child: Row(children: [
-                Icon(Icons.search,
-                    size: 14, color: Colors.white.withValues(alpha: 0.7)),
-                const SizedBox(width: 8),
-                Text('Cari Transaksi...',
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.white.withValues(alpha: 0.5))),
-              ]),
+        // ── Baris: Total Saldo | Bulan + Settings ──
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Total Saldo',
+              style: TextStyle(fontSize: 10, letterSpacing: 0.5, color: Colors.white.withValues(alpha: 0.55)),
             ),
-          ),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const SettingScreen())),
-            child: Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  shape: BoxShape.circle),
-              child: Icon(Icons.settings_outlined,
-                  size: 15, color: Colors.white.withValues(alpha: 0.8)),
-            ),
-          ),
-        ]),
-        const SizedBox(height: 18),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text('April',
-                style: TextStyle(
-                    fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
-            const SizedBox(width: 4),
-            Icon(Icons.arrow_drop_down,
-                size: 14, color: Colors.white.withValues(alpha: 0.7)),
-          ]),
-        ),
-        const SizedBox(height: 6),
-        Text('Total Saldo',
-            style: TextStyle(
-                fontSize: 10,
-                letterSpacing: 0.5,
-                color: Colors.white.withValues(alpha: 0.55))),
-        const SizedBox(height: 4),
-        Text(_formatRp(totalSaldo),
-            style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                letterSpacing: -0.5)),
-        const SizedBox(height: 16),
-        Row(children: [
-          Expanded(
-              child: _buildSummaryCard(
-                  'Pemasukan', _formatRp(totalSaldo), const Color(0xFF7EE8A2))),
-          const SizedBox(width: 10),
-          Expanded(
-              child: _buildSummaryCard('Pengeluaran',
-                  '-${_formatRp(totalPengeluaran)}', const Color(0xFFF8A5A5))),
-        ]),
-        const SizedBox(height: 10),
-        // ... GestureDetector Rincian ...
-        // ✅ BENAR
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => RincianScreen(
-                  onBack: () => Navigator.pop(context),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              GestureDetector(
+                onTap: () => _pickMonth(context, state),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text(bulanLabel, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.85))),
+                  const SizedBox(width: 3),
+                  Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Colors.white.withValues(alpha: 0.7)),
+                ]),
+              ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingScreen())),
+                child: Container(
+                  width: 30, height: 30,
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle),
+                  child: Icon(Icons.settings_outlined, size: 15, color: Colors.white.withValues(alpha: 0.8)),
                 ),
               ),
-            );
-          },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Rincian',
-                      style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.white.withValues(alpha: 0.6))),
-                  const SizedBox(width: 3),
-                  Icon(Icons.chevron_right,
-                      size: 14, color: Colors.white.withValues(alpha: 0.4)),
-                ],
-              ),
-            ),
+            ]),
+          ],
+        ),
+        const SizedBox(height: 4),
+        // ── Angka saldo ──
+        state.isLoading
+            ? Container(height: 34, width: 180, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)))
+            : Text(_formatRp(state.totalSaldo),
+                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: -0.5)),
+        const SizedBox(height: 16),
+        Row(children: [
+          Expanded(child: _summaryCard('Pemasukan', state.isLoading ? '—' : _formatRp(state.monthIncome), const Color(0xFF7EE8A2), Icons.arrow_downward_rounded)),
+          const SizedBox(width: 10),
+          Expanded(child: _summaryCard('Pengeluaran', state.isLoading ? '—' : '-${_formatRp(state.monthExpense)}', const Color(0xFFF8A5A5), Icons.arrow_upward_rounded)),
+        ]),
+        const SizedBox(height: 10),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RincianScreen(onBack: () => Navigator.pop(context)))),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text('Rincian', style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.6))),
+              const SizedBox(width: 3),
+              Icon(Icons.chevron_right, size: 14, color: Colors.white.withValues(alpha: 0.4)),
+            ]),
           ),
         ),
-      ]), // ← nutup Column
-    ); // ← nutup Container
-  } // ← nutup _buildHeader
-
-  // Sekarang _buildSummaryCard di luar _buildHeader ✅
-  Widget _buildSummaryCard(String label, String value, Color valueColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(14)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label,
-            style: TextStyle(
-                fontSize: 10, color: Colors.white.withValues(alpha: 0.6))),
-        const SizedBox(height: 4),
-        Text(value,
-            style: TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w700, color: valueColor)),
       ]),
     );
   }
 
-  Widget _buildBody(BuildContext context, AppState state, int totalSaldo) {
-    // ... sisa kode sama
+  Widget _summaryCard(String label, String value, Color valueColor, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14)),
+      child: Row(children: [
+        Container(
+          width: 28, height: 28,
+          decoration: BoxDecoration(color: valueColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+          child: Icon(icon, size: 14, color: valueColor),
+        ),
+        const SizedBox(width: 8),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: TextStyle(fontSize: 9, color: Colors.white.withValues(alpha: 0.6))),
+          const SizedBox(height: 2),
+          Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: valueColor)),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _buildTabs(BuildContext context, AppState state) {
     return Expanded(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 16, 20, 10),
-          child: Text('Pengeluaran per Kategori',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF3A2E25))),
+      child: Column(children: [
+        Container(
+          color: Colors.white,
+          child: TabBar(
+            controller: _tabController,
+            indicatorColor: kBrown, indicatorWeight: 2.5,
+            labelColor: kBrown, unselectedLabelColor: kBrownLight,
+            labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            tabs: const [Tab(text: 'Pengeluaran'), Tab(text: 'Pemasukan')],
+          ),
         ),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+          child: TabBarView(
+            controller: _tabController,
             children: [
-              ...state.categories
-                  .map((cat) => _buildCategoryCard(context, cat, totalSaldo)),
-              _buildAddButton(),
+              _buildCategoryList(context, state, categories: state.expenseCategories, total: state.monthExpense, type: 'expense', emptyLabel: 'Belum ada pengeluaran bulan ini'),
+              _buildCategoryList(context, state, categories: state.incomeCategories,  total: state.monthIncome,  type: 'income',  emptyLabel: 'Belum ada pemasukan bulan ini'),
             ],
           ),
         ),
@@ -712,81 +443,115 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCategoryCard(
-      BuildContext context, CategoryData cat, int totalSaldo) {
-    final pct = cat.pct(totalSaldo);
+  Widget _buildCategoryList(BuildContext context, AppState state, {
+    required List<CategoryData> categories,
+    required int total,
+    required String type,
+    required String emptyLabel,
+  }) {
+    if (state.isLoading) return const Center(child: CircularProgressIndicator(color: kBrown, strokeWidth: 2));
+
+    final active = categories.where((c) => c.amount > 0).toList();
+    final empty  = categories.where((c) => c.amount == 0).toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        if (active.isEmpty && empty.isEmpty)
+          _emptyState(emptyLabel)
+        else ...[
+          if (active.isNotEmpty) ...[
+            ...active.map((cat) => _categoryCard(context, state, cat, total, type)),
+            const SizedBox(height: 8),
+          ],
+          if (empty.isNotEmpty) ...[
+            if (active.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text('Tidak ada aktivitas', style: TextStyle(fontSize: 11, color: kBrownLight.withValues(alpha: 0.7))),
+              ),
+            ...empty.map((cat) => _categoryCard(context, state, cat, total, type)),
+          ],
+        ],
+        _addButton(type),
+      ],
+    );
+  }
+
+  Widget _categoryCard(BuildContext context, AppState state, CategoryData cat, int total, String type) {
+    final pct       = cat.pct(total);
     final hasAmount = cat.amount > 0;
+    final isIncome  = type == 'income';
 
     return GestureDetector(
-      onTap: () => showCategoryTransactions(context, cat, totalSaldo),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CategoryDetailScreen(
+            category: cat,
+            type: type,
+            month: state.selectedMonth,
+            year: state.selectedYear,
+          ),
+        ),
+      ).then((_) => state.loadData()),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: Colors.black.withValues(alpha: 0.06), width: 0.5),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.05), width: 0.5),
         ),
-        child: Row(children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-                color: cat.bg, borderRadius: BorderRadius.circular(12)),
-            child: Center(
-                child: Text(cat.icon, style: const TextStyle(fontSize: 18))),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(cat.name,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2D2218))),
-              const SizedBox(height: 2),
+        child: Column(children: [
+          Row(children: [
+            Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(color: cat.bg, borderRadius: BorderRadius.circular(12)),
+              child: Center(child: Text(cat.icon, style: const TextStyle(fontSize: 18))),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(cat.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218))),
+                const SizedBox(height: 2),
+                Text(
+                  hasAmount ? '$pct% dari total ${isIncome ? "pemasukan" : "pengeluaran"}' : 'Belum ada transaksi',
+                  style: TextStyle(fontSize: 10, color: hasAmount ? kBrownLight : kBrown.withValues(alpha: 0.35), fontStyle: hasAmount ? FontStyle.normal : FontStyle.italic),
+                ),
+              ]),
+            ),
+            Row(children: [
               Text(
-                hasAmount ? '$pct% dari total saldo' : 'Belum ada transaksi',
-                style: TextStyle(
-                  fontSize: 10,
-                  color:
-                      hasAmount ? kBrownLight : kBrown.withValues(alpha: 0.4),
-                  fontStyle: hasAmount ? FontStyle.normal : FontStyle.italic,
-                ),
+                hasAmount ? (isIncome ? '+' : '-') + _formatRp(cat.amount) : '—',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                    color: hasAmount ? (isIncome ? const Color(0xFF43A047) : const Color(0xFFEF5350)) : kBrownLight),
               ),
-              if (hasAmount) ...[
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: LinearProgressIndicator(
-                    value: (pct / 100).clamp(0.0, 1.0),
-                    minHeight: 3,
-                    backgroundColor: const Color(0xFFF0E9E2),
-                    valueColor: AlwaysStoppedAnimation<Color>(cat.color),
-                  ),
-                ),
-              ],
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, size: 14, color: kBrownLight.withValues(alpha: 0.5)),
             ]),
-          ),
-          const SizedBox(width: 10),
-          hasAmount
-              ? Text(_formatRp(cat.amount),
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2D2218)))
-              : Icon(Icons.chevron_right,
-                  size: 18, color: kBrown.withValues(alpha: 0.3)),
+          ]),
+          if (hasAmount) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: (pct / 100).clamp(0.0, 1.0),
+                minHeight: 4,
+                backgroundColor: const Color(0xFFF0E9E2),
+                valueColor: AlwaysStoppedAnimation<Color>(cat.color),
+              ),
+            ),
+          ],
         ]),
       ),
     );
   }
 
-  Widget _buildAddButton() {
+  Widget _addButton(String type) {
+    final isIncome = type == 'income';
     return GestureDetector(
-      onTap: () => setState(() => _showModal = true),
+      onTap: () => setState(() => _modalType = type),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(vertical: 13),
@@ -795,25 +560,36 @@ class _HomeScreenState extends State<HomeScreen> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFC9B9A8), width: 1.5),
         ),
-        child:
-            const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          SizedBox(
-            width: 22,
-            height: 22,
-            child: DecoratedBox(
-              decoration: BoxDecoration(color: kBrown, shape: BoxShape.circle),
-              child: Center(
-                  child: Text('+',
-                      style: TextStyle(
-                          color: Colors.white, fontSize: 16, height: 1))),
-            ),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Container(
+            width: 22, height: 22,
+            decoration: const BoxDecoration(color: kBrown, shape: BoxShape.circle),
+            child: const Center(child: Text('+', style: TextStyle(color: Colors.white, fontSize: 16, height: 1))),
           ),
-          SizedBox(width: 8),
-          Text('Tambah Kategori',
-              style: TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w600, color: kBrown)),
+          const SizedBox(width: 8),
+          Text(isIncome ? 'Tambah Sumber Pemasukan' : 'Tambah Kategori',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: kBrown)),
         ]),
       ),
     );
+  }
+
+  Widget _emptyState(String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Center(child: Column(children: [
+        const Text('📭', style: TextStyle(fontSize: 40)),
+        const SizedBox(height: 10),
+        Text(label, style: const TextStyle(fontSize: 13, color: kBrownLight)),
+      ])),
+    );
+  }
+
+  String _formatRp(int num) {
+    final s = num.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
+    return 'Rp $s';
   }
 }

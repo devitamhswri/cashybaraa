@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/transaction_provider.dart';
+import '../services/firebase_service.dart';
 import 'app_state.dart';
 
-const Color kBrown = Color(0xFF4A3728);
-const Color kBrownDark = Color(0xFF3A2218);
+const Color _kBrown = Color(0xFF4A3728);
 
 class RincianScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -16,7 +17,7 @@ class RincianScreen extends StatefulWidget {
 class _RincianScreenState extends State<RincianScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _slideController;
-  late Animation<Offset> _slideAnim;
+  late Animation<Offset>   _slideAnim;
 
   @override
   void initState() {
@@ -48,11 +49,11 @@ class _RincianScreenState extends State<RincianScreen>
     widget.onBack();
   }
 
-  // ─── Tambah Akun Baru ────────────────────────────────────────────────────
+  // ─── Tambah Akun ──────────────────────────────────────────────────────────
   void _showTambahAkun(AppState state) {
-    final namaController = TextEditingController();
+    final namaController  = TextEditingController();
     final saldoController = TextEditingController();
-    String selectedType = 'bank';
+    String selectedType   = 'bank';
 
     showModalBottomSheet(
       context: context,
@@ -60,8 +61,7 @@ class _RincianScreenState extends State<RincianScreen>
       backgroundColor: Colors.transparent,
       builder: (_) => StatefulBuilder(
         builder: (ctx, setModal) => Padding(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -72,85 +72,50 @@ class _RincianScreenState extends State<RincianScreen>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Tambah Akun',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF2D2218))),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF2D2218))),
                     GestureDetector(
                         onTap: () => Navigator.pop(ctx),
-                        child: const Icon(Icons.close,
-                            size: 20, color: Color(0xFF9E8F82))),
+                        child: const Icon(Icons.close, size: 20, color: Color(0xFF9E8F82))),
                   ],
                 ),
                 const SizedBox(height: 20),
-
-                // Jenis akun chips
-                const Text('Jenis Akun',
-                    style:
-                        TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
+                const Text('Jenis Akun', style: TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    _typeChip('Bank', 'bank', selectedType,
-                        (v) => setModal(() => selectedType = v)),
+                    _typeChip('Bank',       'bank',    selectedType, (v) => setModal(() => selectedType = v)),
                     const SizedBox(width: 8),
-                    _typeChip('Uang Tunai', 'cash', selectedType,
-                        (v) => setModal(() => selectedType = v)),
+                    _typeChip('Uang Tunai', 'cash',    selectedType, (v) => setModal(() => selectedType = v)),
                     const SizedBox(width: 8),
-                    _typeChip('E-Wallet', 'ewallet', selectedType,
-                        (v) => setModal(() => selectedType = v)),
+                    _typeChip('E-Wallet',   'ewallet', selectedType, (v) => setModal(() => selectedType = v)),
                   ],
                 ),
                 const SizedBox(height: 14),
-
-                // Nama akun — disembunyikan untuk uang tunai
                 if (selectedType != 'cash') ...[
-                  const Text('Nama Akun',
-                      style: TextStyle(
-                          fontSize: 11, color: Color(0xFF9E8F82))),
+                  const Text('Nama Akun', style: TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
                   const SizedBox(height: 4),
                   _buildInput(
                       controller: namaController,
-                      hint: selectedType == 'bank'
-                          ? 'cth: BCA, BRI, Mandiri...'
-                          : 'cth: OVO, GoPay, Dana...'),
+                      hint: selectedType == 'bank' ? 'cth: BCA, BRI, Mandiri...' : 'cth: OVO, GoPay, Dana...'),
                   const SizedBox(height: 12),
                 ],
-
-                // Saldo awal
-                const Text('Saldo Awal',
-                    style:
-                        TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
+                const Text('Saldo Awal', style: TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
                 const SizedBox(height: 4),
-                _buildInput(
-                    controller: saldoController,
-                    hint: '0',
-                    keyboardType: TextInputType.number,
-                    prefix: 'Rp '),
+                _buildInput(controller: saldoController, hint: '0', keyboardType: TextInputType.number, prefix: 'Rp '),
                 const SizedBox(height: 20),
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      // Uang tunai pakai nama default
-                      final nama = selectedType == 'cash'
-                          ? 'Uang Tunai'
-                          : namaController.text.trim();
-                      final saldo = int.tryParse(saldoController.text
-                              .replaceAll('.', '')
-                              .trim()) ??
-                          0;
+                      final nama  = selectedType == 'cash' ? 'Uang Tunai' : namaController.text.trim();
+                      final saldo = int.tryParse(saldoController.text.replaceAll('.', '').trim()) ?? 0;
                       if (nama.isEmpty) return;
                       state.tambahAkun(AkunItem(
-                        nama: nama,
-                        tipe: selectedType,
-                        saldo: saldo,
+                        nama: nama, tipe: selectedType, saldo: saldo,
                         bgColor: selectedType == 'bank'
                             ? const Color(0xFFE8F4FF)
                             : selectedType == 'cash'
@@ -160,17 +125,13 @@ class _RincianScreenState extends State<RincianScreen>
                       Navigator.pop(ctx);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: kBrown,
+                      backgroundColor: _kBrown,
                       padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
                     ),
                     child: const Text('Tambah',
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white)),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
                   ),
                 ),
               ],
@@ -181,9 +142,9 @@ class _RincianScreenState extends State<RincianScreen>
     );
   }
 
-  // ─── Tambah Saldo ke Akun yang Sudah Ada ─────────────────────────────────
+  // ─── Tambah Saldo — tercatat sebagai transaksi pemasukan ──────────────────
   void _showTambahSaldo(AppState state, int index) {
-    final akun = state.akunList[index];
+    final akun            = state.akunList[index];
     final saldoController = TextEditingController();
 
     showModalBottomSheet(
@@ -191,8 +152,7 @@ class _RincianScreenState extends State<RincianScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -207,80 +167,80 @@ class _RincianScreenState extends State<RincianScreen>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(
-                      'Tambah Saldo — ${akun.nama}',
-                      style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF2D2218)),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    child: Text('Tambah Saldo — ${akun.nama}',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF2D2218)),
+                        overflow: TextOverflow.ellipsis),
                   ),
                   GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: const Icon(Icons.close,
-                          size: 20, color: Color(0xFF9E8F82))),
+                      child: const Icon(Icons.close, size: 20, color: Color(0xFF9E8F82))),
                 ],
               ),
-
-              // Saldo saat ini
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F0EA),
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                    color: const Color(0xFFF5F0EA), borderRadius: BorderRadius.circular(10)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Saldo saat ini',
-                        style: TextStyle(fontSize: 10, color: Color(0xFF9E8F82))),
+                    const Text('Saldo saat ini', style: TextStyle(fontSize: 10, color: Color(0xFF9E8F82))),
                     const SizedBox(height: 2),
                     Text(_formatRp(akun.saldo),
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF2D2218))),
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF2D2218))),
                   ],
                 ),
               ),
-
               const SizedBox(height: 14),
-              const Text('Jumlah yang Ditambahkan',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
+              const Text('Jumlah yang Ditambahkan', style: TextStyle(fontSize: 11, color: Color(0xFF9E8F82))),
               const SizedBox(height: 4),
-              _buildInput(
-                  controller: saldoController,
-                  hint: '0',
-                  keyboardType: TextInputType.number,
-                  prefix: 'Rp '),
+              _buildInput(controller: saldoController, hint: '0', keyboardType: TextInputType.number, prefix: 'Rp '),
               const SizedBox(height: 20),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    final tambah = int.tryParse(
-                            saldoController.text.replaceAll('.', '').trim()) ??
-                        0;
+                  onPressed: () async {
+                    final tambah = int.tryParse(saldoController.text.replaceAll('.', '').trim()) ?? 0;
                     if (tambah <= 0) return;
-                    state.tambahSaldoAkun(index, tambah);
+
+                    // Tutup modal dulu sebelum async gap
                     Navigator.pop(context);
+
+                    final now     = DateTime.now();
+                    final dateStr = '${now.year}-'
+                        '${now.month.toString().padLeft(2, '0')}-'
+                        '${now.day.toString().padLeft(2, '0')}';
+
+                    // 1. Catat sebagai transaksi income di Firestore
+                    await FirebaseService.addTransaction({
+                      'category_id': '',
+                      'type':        'income',
+                      'amount':      tambah,
+                      'date':        dateStr,
+                      'note':        'Tambah saldo ${akun.nama}',
+                      'akun':        akun.nama,
+                    });
+
+                    // 2. Update saldo akun
+                    final saldoBaru = akun.saldo + tambah;
+                    await FirebaseService.updateSaldoAkun(akun.id, saldoBaru);
+
+                    // 3. Reload — pakai mounted check
+                    if (mounted) {
+                      await state.loadData();
+                      Provider.of<TransactionProvider>(context, listen: false)
+                          .loadMonth(now.year, now.month);
+                    }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kBrown,
+                    backgroundColor: _kBrown,
                     padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
                   child: const Text('Simpan',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white)),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
                 ),
               ),
             ],
@@ -290,21 +250,19 @@ class _RincianScreenState extends State<RincianScreen>
     );
   }
 
-  Widget _typeChip(String label, String value, String selected,
-      void Function(String) onTap) {
+  Widget _typeChip(String label, String value, String selected, void Function(String) onTap) {
     final isSelected = selected == value;
     return GestureDetector(
       onTap: () => onTap(value),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? kBrown : const Color(0xFFF5F0EA),
+          color: isSelected ? _kBrown : const Color(0xFFF5F0EA),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(label,
             style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+                fontSize: 12, fontWeight: FontWeight.w600,
                 color: isSelected ? Colors.white : const Color(0xFF9E8F82))),
       ),
     );
@@ -321,25 +279,29 @@ class _RincianScreenState extends State<RincianScreen>
       keyboardType: keyboardType,
       style: const TextStyle(fontSize: 13, color: Color(0xFF2D2218)),
       decoration: InputDecoration(
-        hintText: hint,
-        prefixText: prefix,
-        hintStyle:
-            const TextStyle(fontSize: 13, color: Color(0xFFBDB0A6)),
-        filled: true,
-        fillColor: const Color(0xFFF5F0EA),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none),
+        hintText: hint, prefixText: prefix,
+        hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFBDB0A6)),
+        filled: true, fillColor: const Color(0xFFF5F0EA),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: const BorderSide(color: Color(0xFFE8E0D8))),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: kBrown, width: 1.5)),
+            borderSide: const BorderSide(color: _kBrown, width: 1.5)),
       ),
     );
+  }
+
+  Widget _akunIcon(String tipe) {
+    switch (tipe) {
+      case 'bank':    return const Text('🏦', style: TextStyle(fontSize: 24));
+      case 'cash':    return const Text('💵', style: TextStyle(fontSize: 24));
+      case 'ewallet': return const Text('📱', style: TextStyle(fontSize: 24));
+      default:
+        return const Icon(Icons.account_balance_wallet_outlined, size: 24, color: Color(0xFF9E8F82));
+    }
   }
 
   @override
@@ -348,169 +310,182 @@ class _RincianScreenState extends State<RincianScreen>
       builder: (context, state, _) {
         return SlideTransition(
           position: _slideAnim,
-          child: Container(
-            color: kBrownDark,
-            child: Column(
+          child: Scaffold(
+            backgroundColor: _kBrown,
+            body: Column(
               children: [
-                _buildHeader(state),
-                Expanded(child: _buildBody(state)),
+                // ── Header ────────────────────────────────────────────────
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                      20, MediaQuery.of(context).padding.top + 12, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: _goBack,
+                            child: Row(
+                              children: [
+                                Icon(Icons.chevron_left, size: 18, color: Colors.white.withValues(alpha: 0.8)),
+                                const SizedBox(width: 2),
+                                Text('Ringkasan',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.white.withValues(alpha: 0.8),
+                                        fontWeight: FontWeight.w500)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // ── Bubble Total Saldo ──────────────────────────────
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'TOTAL SALDO SAAT INI',
+                                    style: TextStyle(
+                                        fontSize: 10, letterSpacing: 1.2,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white.withValues(alpha: 0.55)),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  state.isLoading
+                                      ? Container(
+                                          height: 36, width: 160,
+                                          decoration: BoxDecoration(
+                                              color: Colors.white.withValues(alpha: 0.12),
+                                              borderRadius: BorderRadius.circular(8)))
+                                      : Text(
+                                          _formatRp(state.totalSaldo),
+                                          style: const TextStyle(
+                                              fontSize: 30, fontWeight: FontWeight.w800,
+                                              color: Colors.white, letterSpacing: -0.5),
+                                        ),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => _showTambahAkun(state),
+                              child: Container(
+                                width: 36, height: 36,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                                ),
+                                child: const Icon(Icons.add, size: 20, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+
+                // ── List Akun ─────────────────────────────────────────────
+                Expanded(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF5F0EA),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                    ),
+                    child: state.akunList.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.account_balance_wallet_outlined,
+                                    size: 48, color: Colors.brown.withValues(alpha: 0.3)),
+                                const SizedBox(height: 12),
+                                Text('Belum ada akun',
+                                    style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+                                const SizedBox(height: 4),
+                                Text('Tap + untuk menambahkan akun',
+                                    style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                            itemCount: state.akunList.length,
+                            itemBuilder: (_, i) {
+                              final akun = state.akunList[i];
+                              return GestureDetector(
+                                onTap: () => _showTambahSaldo(state, i),
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.05),
+                                        blurRadius: 10, offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 48, height: 48,
+                                        decoration: BoxDecoration(
+                                            color: akun.bgColor,
+                                            borderRadius: BorderRadius.circular(14)),
+                                        child: Center(child: _akunIcon(akun.tipe)),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Text(akun.nama,
+                                            style: const TextStyle(
+                                                fontSize: 15, fontWeight: FontWeight.w600,
+                                                color: Color(0xFF2D2218))),
+                                      ),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          Text(_formatRp(akun.saldo),
+                                              style: const TextStyle(
+                                                  fontSize: 15, fontWeight: FontWeight.w700,
+                                                  color: Color(0xFF2D8A50))),
+                                          const SizedBox(height: 2),
+                                          Text('Tap untuk tambah',
+                                              style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: Colors.black.withValues(alpha: 0.3))),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ),
               ],
             ),
           ),
         );
       },
     );
-  }
-
-  Widget _buildHeader(AppState state) {
-    return Container(
-      color: kBrownDark,
-      padding: EdgeInsets.fromLTRB(
-          20, MediaQuery.of(context).padding.top + 12, 20, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              GestureDetector(
-                onTap: _goBack,
-                child: Row(
-                  children: [
-                    Icon(Icons.chevron_left,
-                        size: 18, color: Colors.white.withOpacity(0.8)),
-                    const SizedBox(width: 2),
-                    Text('Ringkasan',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.white.withOpacity(0.8),
-                            fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ),
-              Icon(Icons.settings_outlined,
-                  size: 20, color: Colors.white.withOpacity(0.7)),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text('TOTAL SALDO SAAT INI',
-              style: TextStyle(
-                  fontSize: 10,
-                  letterSpacing: 1,
-                  color: Colors.white.withOpacity(0.55))),
-          const SizedBox(height: 6),
-          Text(_formatRp(state.totalSaldo),
-              style: const TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: -0.5)),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: GestureDetector(
-              onTap: () => _showTambahAkun(state),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                  border:
-                      Border.all(color: Colors.white.withOpacity(0.2)),
-                ),
-                child:
-                    const Icon(Icons.add, size: 18, color: Colors.white),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBody(AppState state) {
-    return Container(
-      // FIX: background putih kecoklatan supaya card terlihat
-      color: const Color(0xFFF5F0EA),
-      child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-        itemCount: state.akunList.length,
-        itemBuilder: (_, i) {
-          final akun = state.akunList[i];
-          return GestureDetector(
-            // TAP → tambah saldo
-            onTap: () => _showTambahSaldo(state, i),
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE8E0D8)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  // Icon
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                        color: akun.bgColor,
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Center(child: _akunIcon(akun.tipe)),
-                  ),
-                  const SizedBox(width: 14),
-                  // Nama
-                  Expanded(
-                      child: Text(akun.nama,
-                          style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF2D2218)))),
-                  // Saldo + arrow
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(_formatRp(akun.saldo),
-                          style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF2D8A50))),
-                      const SizedBox(height: 2),
-                      Text('Tap untuk tambah',
-                          style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.black.withOpacity(0.3))),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _akunIcon(String tipe) {
-    switch (tipe) {
-      case 'bank':
-        return const Text('🏦', style: TextStyle(fontSize: 22));
-      case 'cash':
-        return const Text('💵', style: TextStyle(fontSize: 22));
-      case 'ewallet':
-        return const Text('📱', style: TextStyle(fontSize: 22));
-      default:
-        return const Icon(Icons.account_balance_wallet_outlined,
-            size: 22, color: Color(0xFF9E8F82));
-    }
   }
 }

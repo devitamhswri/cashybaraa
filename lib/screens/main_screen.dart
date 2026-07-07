@@ -1,370 +1,61 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'home_screen.dart';
-import 'transaction_screen.dart';
-import 'rincian_screen.dart';
 import 'statistik_screen.dart';
 import 'budget_screen.dart';
+import 'transaction_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
-
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
-  bool _showRincian = false;
+  int _idx = 0;
 
-  void _goToRincian() => setState(() => _showRincian = true);
-  void _backFromRincian() => setState(() => _showRincian = false);
-
-  void _onItemTapped(int index) {
-    HapticFeedback.lightImpact();
-    setState(() {
-      _selectedIndex = index;
-      _showRincian = false;
-    });
-  }
-
-  Widget _buildPage() {
-    switch (_selectedIndex) {
-      case 0:
-        return HomeScreen(onRincian: _goToRincian);
-      case 1:
-        return const TransactionScreen();
-      case 2:
-        return const StatistikScreen();
-      case 3:
-        return const BudgetScreen();
-      default:
-        return const SizedBox();
-    }
-  }
+  final _screens = const [
+    HomeScreen(),
+    TransactionScreen(),
+    StatistikScreen(),
+    BudgetScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body:
-          _showRincian ? RincianScreen(onBack: _backFromRincian) : _buildPage(),
-      bottomNavigationBar: _CashyBaraNavBar(
-        selectedIndex: _selectedIndex,
-        onTap: _onItemTapped,
+      body: IndexedStack(
+        index: _idx,
+        children: _screens,
       ),
-    );
-  }
-}
-
-// ── CUSTOM NAVBAR ─────────────────────────────────────────────────────────────
-
-class _CashyBaraNavBar extends StatelessWidget {
-  final int selectedIndex;
-  final ValueChanged<int> onTap;
-
-  const _CashyBaraNavBar({
-    required this.selectedIndex,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.07),
-            blurRadius: 16,
-            offset: const Offset(0, -2),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _idx,
+        onTap: (i) => setState(() => _idx = i),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color(0xFF4A3728),
+        unselectedItemColor: const Color(0xFF9E8F82),
+        backgroundColor: Colors.white,
+        selectedFontSize: 10,
+        unselectedFontSize: 10,
+        elevation: 10,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.grid_view_rounded),
+            label: 'Beranda',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.receipt_long_outlined),
+            label: 'Transaksi',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart_rounded),
+            label: 'Statistik',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            label: 'Budget',
           ),
         ],
       ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            children: [
-              _NavItem(
-                  index: 0,
-                  selectedIndex: selectedIndex,
-                  label: 'Beranda',
-                  icon: _NavIcon.beranda,
-                  onTap: onTap),
-              _NavItem(
-                  index: 1,
-                  selectedIndex: selectedIndex,
-                  label: 'Transaksi',
-                  icon: _NavIcon.transaksi,
-                  onTap: onTap),
-              _NavItem(
-                  index: 2,
-                  selectedIndex: selectedIndex,
-                  label: 'Statistik',
-                  icon: _NavIcon.statistik,
-                  onTap: onTap),
-              _NavItem(
-                  index: 3,
-                  selectedIndex: selectedIndex,
-                  label: 'Budget',
-                  icon: _NavIcon.budget,
-                  onTap: onTap),
-            ],
-          ),
-        ),
-      ),
     );
   }
-}
-
-class _NavItem extends StatelessWidget {
-  final int index;
-  final int selectedIndex;
-  final String label;
-  final _NavIcon icon;
-  final ValueChanged<int> onTap;
-
-  const _NavItem({
-    required this.index,
-    required this.selectedIndex,
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isSelected = index == selectedIndex;
-    const activeColor = Color(0xFF41241A);
-    const inactiveColor = Color(0xFFB0A090);
-
-    return Expanded(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onTap(index),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedScale(
-              scale: isSelected ? 1.12 : 1.0,
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOut,
-              child: _NavSvgIcon(
-                icon: icon,
-                color: isSelected ? activeColor : inactiveColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 180),
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                color: isSelected ? activeColor : inactiveColor,
-              ),
-              child: Text(label),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-enum _NavIcon { beranda, transaksi, statistik, budget }
-
-class _NavSvgIcon extends StatelessWidget {
-  final _NavIcon icon;
-  final Color color;
-
-  const _NavSvgIcon({required this.icon, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(28, 28),
-      painter: _IconPainter(icon: icon, color: color),
-    );
-  }
-}
-
-class _IconPainter extends CustomPainter {
-  final _NavIcon icon;
-  final Color color;
-
-  _IconPainter({required this.icon, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    switch (icon) {
-      case _NavIcon.beranda:
-        _drawBeranda(canvas, size);
-        break;
-      case _NavIcon.transaksi:
-        _drawTransaksi(canvas, size);
-        break;
-      case _NavIcon.statistik:
-        _drawStatistik(canvas, size);
-        break;
-      case _NavIcon.budget:
-        _drawBudget(canvas, size);
-        break;
-    }
-  }
-
-  Paint get _stroke => Paint()
-    ..color = color
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 1.7
-    ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round;
-
-  void _drawBeranda(Canvas canvas, Size s) {
-    final p = _stroke;
-    final book = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-          s.width * 0.1, s.height * 0.1, s.width * 0.72, s.height * 0.82),
-      const Radius.circular(3),
-    );
-    canvas.drawRRect(book, p);
-    canvas.drawLine(Offset(s.width * 0.22, s.height * 0.1),
-        Offset(s.width * 0.22, s.height * 0.92), p);
-    canvas.drawCircle(
-        Offset(s.width * 0.56, s.height * 0.46), s.width * 0.18, p);
-    final dp = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..strokeCap = StrokeCap.round;
-    final cx = s.width * 0.56;
-    final cy = s.height * 0.46;
-    final path = Path();
-    path.moveTo(cx + 4, cy - 5);
-    path.cubicTo(cx - 5, cy - 5, cx - 5, cy, cx, cy);
-    path.cubicTo(cx + 5, cy, cx + 5, cy + 5, cx - 4, cy + 5);
-    canvas.drawPath(path, dp);
-    canvas.drawLine(Offset(cx, cy - 7), Offset(cx, cy + 7), dp);
-    final lp = Paint()
-      ..color = color
-      ..strokeWidth = 1.2
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(s.width * 0.28, s.height * 0.68),
-        Offset(s.width * 0.46, s.height * 0.68), lp);
-    canvas.drawLine(Offset(s.width * 0.28, s.height * 0.76),
-        Offset(s.width * 0.46, s.height * 0.76), lp);
-  }
-
-  void _drawTransaksi(Canvas canvas, Size s) {
-    final p = _stroke;
-    final path = Path();
-    path.moveTo(s.width * 0.18, s.height * 0.05);
-    path.lineTo(s.width * 0.82, s.height * 0.05);
-    path.lineTo(s.width * 0.82, s.height * 0.88);
-    path.lineTo(s.width * 0.72, s.height * 0.78);
-    path.lineTo(s.width * 0.62, s.height * 0.88);
-    path.lineTo(s.width * 0.50, s.height * 0.78);
-    path.lineTo(s.width * 0.38, s.height * 0.88);
-    path.lineTo(s.width * 0.28, s.height * 0.78);
-    path.lineTo(s.width * 0.18, s.height * 0.88);
-    path.close();
-    canvas.drawPath(path, p);
-    canvas.drawCircle(
-        Offset(s.width * 0.50, s.height * 0.40), s.width * 0.17, p);
-    final dp = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.3
-      ..strokeCap = StrokeCap.round;
-    final cx = s.width * 0.50;
-    final cy = s.height * 0.40;
-    final sp = Path();
-    sp.moveTo(cx + 3.5, cy - 4.5);
-    sp.cubicTo(cx - 4.5, cy - 4.5, cx - 4.5, cy, cx, cy);
-    sp.cubicTo(cx + 4.5, cy, cx + 4.5, cy + 4.5, cx - 3.5, cy + 4.5);
-    canvas.drawPath(sp, dp);
-    canvas.drawLine(Offset(cx, cy - 6.5), Offset(cx, cy + 6.5), dp);
-    final lp = Paint()
-      ..color = color
-      ..strokeWidth = 1.1
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(s.width * 0.30, s.height * 0.67),
-        Offset(s.width * 0.70, s.height * 0.67), lp);
-    canvas.drawLine(Offset(s.width * 0.30, s.height * 0.74),
-        Offset(s.width * 0.58, s.height * 0.74), lp);
-  }
-
-  void _drawStatistik(Canvas canvas, Size s) {
-    final p = _stroke;
-    final bars = [
-      Rect.fromLTWH(
-          s.width * 0.12, s.height * 0.52, s.width * 0.18, s.height * 0.36),
-      Rect.fromLTWH(
-          s.width * 0.38, s.height * 0.32, s.width * 0.18, s.height * 0.56),
-      Rect.fromLTWH(
-          s.width * 0.64, s.height * 0.18, s.width * 0.18, s.height * 0.70),
-    ];
-    for (final bar in bars) {
-      canvas.drawRRect(
-          RRect.fromRectAndRadius(bar, const Radius.circular(3)), p);
-    }
-    final ap = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final arrowPath = Path();
-    arrowPath.moveTo(s.width * 0.18, s.height * 0.60);
-    arrowPath.lineTo(s.width * 0.42, s.height * 0.38);
-    arrowPath.lineTo(s.width * 0.58, s.height * 0.50);
-    arrowPath.lineTo(s.width * 0.80, s.height * 0.20);
-    canvas.drawPath(arrowPath, ap);
-    final tip = Offset(s.width * 0.80, s.height * 0.20);
-    canvas.drawLine(tip, Offset(s.width * 0.66, s.height * 0.18), ap);
-    canvas.drawLine(tip, Offset(s.width * 0.82, s.height * 0.34), ap);
-  }
-
-  void _drawBudget(Canvas canvas, Size s) {
-    final p = _stroke;
-    final crownPath = Path();
-    crownPath.moveTo(s.width * 0.28, s.height * 0.28);
-    crownPath.lineTo(s.width * 0.18, s.height * 0.10);
-    crownPath.lineTo(s.width * 0.35, s.height * 0.20);
-    crownPath.lineTo(s.width * 0.50, s.height * 0.05);
-    crownPath.lineTo(s.width * 0.65, s.height * 0.20);
-    crownPath.lineTo(s.width * 0.82, s.height * 0.10);
-    crownPath.lineTo(s.width * 0.72, s.height * 0.28);
-    crownPath.close();
-    canvas.drawPath(crownPath, p);
-    canvas.drawOval(
-        Rect.fromLTWH(
-            s.width * 0.18, s.height * 0.28, s.width * 0.64, s.height * 0.22),
-        p);
-    canvas.drawLine(Offset(s.width * 0.18, s.height * 0.39),
-        Offset(s.width * 0.18, s.height * 0.72), p);
-    canvas.drawLine(Offset(s.width * 0.82, s.height * 0.39),
-        Offset(s.width * 0.82, s.height * 0.72), p);
-    canvas.drawOval(
-        Rect.fromLTWH(
-            s.width * 0.18, s.height * 0.61, s.width * 0.64, s.height * 0.22),
-        p);
-    final dp = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.3
-      ..strokeCap = StrokeCap.round;
-    final cx = s.width * 0.50;
-    final cy = s.height * 0.50;
-    final sp = Path();
-    sp.moveTo(cx + 3.5, cy - 4);
-    sp.cubicTo(cx - 4, cy - 4, cx - 4, cy, cx, cy);
-    sp.cubicTo(cx + 4, cy, cx + 4, cy + 4, cx - 3.5, cy + 4);
-    canvas.drawPath(sp, dp);
-    canvas.drawLine(Offset(cx, cy - 6), Offset(cx, cy + 6), dp);
-  }
-
-  @override
-  bool shouldRepaint(_IconPainter old) =>
-      old.color != color || old.icon != icon;
 }

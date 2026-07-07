@@ -1,52 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'dart:math' as math;
+import '../services/firebase_service.dart';
+import 'app_state.dart';
 
 const Color kBrown      = Color(0xFF4A3728);
 const Color kBrownLight = Color(0xFF9E8F82);
 const Color kBg         = Color(0xFFF5F0EA);
 const Color kKeluar     = Color(0xFFB85C38);
 const Color kMasuk      = Color(0xFF6BAA8E);
-
-// ── MODEL ─────────────────────────────────────────────────────────────────────
-
-class BudgetKategori {
-  final int id;
-  final String nama;
-  final String icon;
-  final Color bg;
-  final Color color;
-  int limitAmount;    // 0 = belum diset
-  final int terpakai; // dummy spending
-
-  BudgetKategori({
-    required this.id,
-    required this.nama,
-    required this.icon,
-    required this.bg,
-    required this.color,
-    this.limitAmount = 0,
-    this.terpakai = 0,
-  });
-
-  int get sisa        => limitAmount - terpakai;
-  double get pctUsed  => limitAmount > 0 ? (terpakai / limitAmount).clamp(0.0, 1.0) : 0;
-  bool get hampirHabis => pctUsed >= 0.8 && pctUsed < 1.0;
-  bool get habis       => pctUsed >= 1.0;
-}
-
-// ── DUMMY DATA ─────────────────────────────────────────────────────────────────
-
-List<BudgetKategori> _buildKategoriList() => [
-  BudgetKategori(id: 1, nama: 'Makanan',       icon: '🍔', bg: const Color(0xFFFFF3E0), color: kKeluar,                  terpakai: 325000),
-  BudgetKategori(id: 2, nama: 'Transportasi',  icon: '🚗', bg: const Color(0xFFE3F2FD), color: const Color(0xFF42A5F5),  terpakai: 176000),
-  BudgetKategori(id: 3, nama: 'Tagihan Rumah', icon: '🏠', bg: const Color(0xFFE8F5E9), color: const Color(0xFF66BB6A),  terpakai: 89000),
-  BudgetKategori(id: 4, nama: 'Belanja',       icon: '🛍', bg: const Color(0xFFFCE4EC), color: const Color(0xFFEC407A),  terpakai: 89000),
-  BudgetKategori(id: 5, nama: 'Kesehatan',     icon: '❤️', bg: const Color(0xFFFDF3E7), color: const Color(0xFFEF5350),  terpakai: 62500),
-  BudgetKategori(id: 6, nama: 'Perawatan',     icon: '💆', bg: const Color(0xFFF3E5F5), color: const Color(0xFFAB47BC),  terpakai: 0),
-];
-
-const int _dummyIncome = 5000000; // Rp 5.000.000
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
@@ -62,60 +25,164 @@ String formatShort(int n) {
   return '$n';
 }
 
+const _bulanNames = ['','Januari','Februari','Maret','April','Mei','Juni',
+    'Juli','Agustus','September','Oktober','November','Desember'];
+
+// ── MODEL ─────────────────────────────────────────────────────────────────────
+
+class BudgetKategori {
+  final String id;
+  final String nama;
+  final String icon;
+  final Color bg;
+  final Color color;
+  int limitAmount;
+  final int terpakai;
+
+  BudgetKategori({
+    required this.id,
+    required this.nama,
+    required this.icon,
+    required this.bg,
+    required this.color,
+    this.limitAmount = 0,
+    this.terpakai = 0,
+  });
+
+  int get sisa         => limitAmount - terpakai;
+  double get pctUsed   => limitAmount > 0 ? (terpakai / limitAmount).clamp(0.0, 1.0) : 0;
+  bool get hampirHabis => pctUsed >= 0.8 && pctUsed < 1.0;
+  bool get habis       => pctUsed >= 1.0;
+}
+
 // ── BUDGET SCREEN ─────────────────────────────────────────────────────────────
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
-
   @override
   State<BudgetScreen> createState() => _BudgetScreenState();
 }
 
 class _BudgetScreenState extends State<BudgetScreen> {
-  int _tab = 0; // 0=Rencana, 1=Sisa
-  bool _budgetSet = false;
-  List<BudgetKategori> _kategori = _buildKategoriList();
+  int _tab = 0;
+  bool _isLoading = true;
+  List<BudgetKategori> _kategori = [];
 
   int get _totalBudget   => _kategori.fold(0, (s, k) => s + k.limitAmount);
   int get _totalTerpakai => _kategori.fold(0, (s, k) => s + k.terpakai);
   int get _totalSisa     => _totalBudget - _totalTerpakai;
+  bool get _budgetSet    => _kategori.any((k) => k.limitAmount > 0);
 
-  void _openSetBudget() async {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadBudget());
+  }
+
+  Future<void> _loadBudget() async {
+    setState(() => _isLoading = true);
+    final appState = context.read<AppState>();
+    final month    = appState.selectedMonth;
+    final year     = appState.selectedYear;
+
+    final results = await Future.wait([
+      FirebaseService.getCategories(type: 'expense'),
+      FirebaseService.getBudgets(month, year),
+      FirebaseService.getTransactions(month: month, year: year),
+    ]);
+
+    final cats    = results[0] as List<Map<String, dynamic>>;
+    final budgets = results[1] as List<Map<String, dynamic>>;
+    final txs     = results[2] as List<Map<String, dynamic>>;
+
+    // Map budget per kategori
+    final budgetMap = <String, int>{};
+    for (final b in budgets) {
+      budgetMap[b['category_id'] as String] = (b['amount'] as num).toInt();
+    }
+
+    // Hitung terpakai per kategori dari transaksi real
+    final terpakaiMap = <String, int>{};
+    for (final t in txs.where((t) => t['type'] == 'expense')) {
+      final cid = t['category_id'] as String? ?? '';
+      terpakaiMap[cid] = (terpakaiMap[cid] ?? 0) + (t['amount'] as int);
+    }
+
+    _kategori = cats.map((c) {
+      final bg    = CategoryData.hexToColor(c['bg_color'], const Color(0xFFF5F0EA));
+      final color = CategoryData.hexToColor(c['color'],    const Color(0xFF4A3728));
+      return BudgetKategori(
+        id:           c['id'],
+        nama:         c['name'] ?? '',
+        icon:         c['icon'] ?? '💰',
+        bg:           bg,
+        color:        color,
+        limitAmount:  budgetMap[c['id']] ?? 0,
+        terpakai:     terpakaiMap[c['id']] ?? 0,
+      );
+    }).toList();
+
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  Future<void> _openSetBudget() async {
+    final appState = context.read<AppState>();
+    final income   = appState.monthIncome;
+
     final result = await Navigator.push<List<BudgetKategori>>(
       context,
       MaterialPageRoute(
         builder: (_) => SetBudgetScreen(
           kategori: _kategori,
-          income: _dummyIncome,
+          income:   income,
+          month:    appState.selectedMonth,
+          year:     appState.selectedYear,
         ),
       ),
     );
+
     if (result != null) {
-      setState(() {
-        _kategori  = result;
-        _budgetSet = result.any((k) => k.limitAmount > 0);
-      });
+      // Simpan semua budget ke Firestore
+      final month = appState.selectedMonth;
+      final year  = appState.selectedYear;
+      for (final k in result) {
+        await FirebaseService.upsertBudget(
+          categoryId: k.id,
+          amount:     k.limitAmount,
+          month:      month,
+          year:       year,
+        );
+      }
+      await _loadBudget();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBg,
-      body: Column(children: [
-        _buildHeader(),
-        Expanded(
-          child: _budgetSet
-              ? (_tab == 0 ? _buildRencana() : _buildSisa())
-              : _buildEmptyState(),
-        ),
-      ]),
+    return Consumer<AppState>(
+      builder: (context, state, _) {
+        final bulanLabel = '${_bulanNames[state.selectedMonth]} ${state.selectedYear}';
+
+        return Scaffold(
+          backgroundColor: kBg,
+          body: Column(children: [
+            _buildHeader(state, bulanLabel),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: kBrown, strokeWidth: 2))
+                  : _budgetSet
+                      ? (_tab == 0 ? _buildRencana() : _buildSisa())
+                      : _buildEmptyState(),
+            ),
+          ]),
+        );
+      },
     );
   }
 
   // ── Header ─────────────────────────────────────────────────────────────────
 
-  Widget _buildHeader() {
+  Widget _buildHeader(AppState state, String bulanLabel) {
     return Container(
       color: kBrown,
       padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 16, 20, 20),
@@ -125,25 +192,39 @@ class _BudgetScreenState extends State<BudgetScreen> {
             const Text('Budget',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
             Text(
-              _budgetSet ? 'Mei 2026' : 'Atur pengeluaranmu',
+              _budgetSet ? bulanLabel : 'Atur pengeluaranmu',
               style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.65)),
             ),
           ]),
           Row(children: [
-            // Bulan navigator
+            // Bulan navigator — pakai AppState.setMonth
+            GestureDetector(
+              onTap: () async {
+                final prev = DateTime(state.selectedYear, state.selectedMonth - 1);
+                await state.setMonth(prev.month, prev.year);
+                _loadBudget();
+              },
+              child: Icon(Icons.chevron_left, color: Colors.white.withOpacity(0.8)),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.chevron_left, size: 16, color: Colors.white.withOpacity(0.8)),
-                const SizedBox(width: 4),
-                Text('Mei', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w600)),
-                const SizedBox(width: 4),
-                Icon(Icons.chevron_right, size: 16, color: Colors.white.withOpacity(0.8)),
-              ]),
+              child: Text(bulanLabel,
+                  style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w600)),
+            ),
+            GestureDetector(
+              onTap: () async {
+                final next = DateTime(state.selectedYear, state.selectedMonth + 1);
+                final now  = DateTime.now();
+                if (next.year < now.year || (next.year == now.year && next.month <= now.month)) {
+                  await state.setMonth(next.month, next.year);
+                  _loadBudget();
+                }
+              },
+              child: Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.8)),
             ),
             if (_budgetSet) ...[
               const SizedBox(width: 8),
@@ -162,13 +243,11 @@ class _BudgetScreenState extends State<BudgetScreen> {
           ]),
         ]),
 
-        if (_budgetSet) ...[
+        if (_budgetSet && !_isLoading) ...[
           const SizedBox(height: 16),
-          // Donut summary + legend
           _buildDonutSummary(),
           const SizedBox(height: 16),
-          // Tab Rencana / Sisa
-          _buildTab(),
+          _buildTabBar(),
         ],
       ]),
     );
@@ -177,7 +256,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
   Widget _buildDonutSummary() {
     final cats = _kategori.where((k) => k.limitAmount > 0).toList();
     return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-      // Donut
       SizedBox(
         width: 90, height: 90,
         child: CustomPaint(
@@ -191,7 +269,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
         ),
       ),
       const SizedBox(width: 14),
-      // Legend
       Expanded(
         child: Wrap(
           spacing: 8, runSpacing: 4,
@@ -210,7 +287,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
     ]);
   }
 
-  Widget _buildTab() {
+  Widget _buildTabBar() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.12),
@@ -238,23 +315,20 @@ class _BudgetScreenState extends State<BudgetScreen> {
           ),
           child: Text(label,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600,
-                color: sel ? Colors.white : Colors.white60,
-              )),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                  color: sel ? Colors.white : Colors.white60)),
         ),
       ),
     );
   }
 
-  // ── Empty state ────────────────────────────────────────────────────────────
+  // ── Empty State ────────────────────────────────────────────────────────────
 
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 40),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          // Capybara illustration
           Container(
             width: 110, height: 110,
             decoration: BoxDecoration(
@@ -268,7 +342,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: kBrown)),
           const SizedBox(height: 8),
           Text(
-            'Yuk atur budget biar keuangan Masbro lebih terencana dan ga kebobolan!',
+            'Yuk atur budget biar keuangan lebih terencana!',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: kBrown.withOpacity(0.6), height: 1.5),
           ),
@@ -312,16 +386,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
-        // Gauge card
         _GaugeCard(
           terpakai: _totalTerpakai,
-          sisa: _totalSisa,
-          total: _totalBudget,
-          pct: pctUsed,
+          sisa:     _totalSisa,
+          total:    _totalBudget,
+          pct:      pctUsed,
         ),
         const SizedBox(height: 14),
-
-        // Kategori header
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -340,7 +411,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
             ),
           ]),
         ),
-
         ...cats.map((k) => _SisaCard(k: k)),
       ],
     );
@@ -352,8 +422,16 @@ class _BudgetScreenState extends State<BudgetScreen> {
 class SetBudgetScreen extends StatefulWidget {
   final List<BudgetKategori> kategori;
   final int income;
+  final int month;
+  final int year;
 
-  const SetBudgetScreen({super.key, required this.kategori, required this.income});
+  const SetBudgetScreen({
+    super.key,
+    required this.kategori,
+    required this.income,
+    required this.month,
+    required this.year,
+  });
 
   @override
   State<SetBudgetScreen> createState() => _SetBudgetScreenState();
@@ -361,17 +439,15 @@ class SetBudgetScreen extends StatefulWidget {
 
 class _SetBudgetScreenState extends State<SetBudgetScreen> {
   late List<BudgetKategori> _cats;
-  // mode: 'bebas' atau 'persen'
-  final Map<int, String> _mode = {};
-  final Map<int, TextEditingController> _ctrlNominal = {};
-  final Map<int, TextEditingController> _ctrlPersen  = {};
+  final Map<String, String> _mode = {};
+  final Map<String, TextEditingController> _ctrlNominal = {};
+  final Map<String, TextEditingController> _ctrlPersen  = {};
 
   int get _totalBudget => _cats.fold(0, (s, k) => s + k.limitAmount);
 
   @override
   void initState() {
     super.initState();
-    // Deep copy
     _cats = widget.kategori.map((k) => BudgetKategori(
       id: k.id, nama: k.nama, icon: k.icon,
       bg: k.bg, color: k.color,
@@ -419,16 +495,12 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
     });
   }
 
-  void _konfirmasi() {
-    Navigator.pop(context, _cats);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final bulanLabel = '${_bulanNames[widget.month]} ${widget.year}';
     return Scaffold(
       backgroundColor: kBg,
       body: Column(children: [
-        // Header
         Container(
           color: kBrown,
           padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 12, 16, 16),
@@ -455,21 +527,15 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
                 color: Colors.white.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.chevron_left, size: 14, color: Colors.white.withOpacity(0.8)),
-                const SizedBox(width: 4),
-                Text('Mei', style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w600)),
-                const SizedBox(width: 4),
-                Icon(Icons.chevron_right, size: 14, color: Colors.white.withOpacity(0.8)),
-              ]),
+              child: Text(bulanLabel,
+                  style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w600)),
             ),
           ]),
         ),
 
         // Total preview
         Container(
-          width: double.infinity,
-          color: kBrown,
+          width: double.infinity, color: kBrown,
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -484,13 +550,16 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
               Text(formatRp(_totalBudget),
                   style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
               const SizedBox(height: 4),
-              Text('Isi limit tiap kategori di bawah',
-                  style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.55))),
+              Text(
+                widget.income > 0
+                    ? 'Pemasukan bulan ini: ${formatRp(widget.income)}'
+                    : 'Isi limit tiap kategori di bawah',
+                style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.55)),
+              ),
             ]),
           ),
         ),
 
-        // List
         Expanded(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -502,12 +571,12 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
                         color: kBrownLight, letterSpacing: 0.8)),
               ),
               ..._cats.map((k) => _KategoriInputCard(
-                k: k,
-                mode: _mode[k.id]!,
-                ctrlNominal: _ctrlNominal[k.id]!,
-                ctrlPersen:  _ctrlPersen[k.id]!,
-                income: widget.income,
-                onToggleMode: (m) => _toggleMode(k, m),
+                k:                k,
+                mode:             _mode[k.id]!,
+                ctrlNominal:      _ctrlNominal[k.id]!,
+                ctrlPersen:       _ctrlPersen[k.id]!,
+                income:           widget.income,
+                onToggleMode:     (m) => _toggleMode(k, m),
                 onNominalChanged: (v) => _onNominalChanged(k, v),
                 onPersenChanged:  (v) => _onPersenChanged(k, v),
               )),
@@ -516,14 +585,13 @@ class _SetBudgetScreenState extends State<SetBudgetScreen> {
         ),
       ]),
 
-      // Bottom konfirmasi
       bottomNavigationBar: Container(
         color: Colors.white,
         padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _konfirmasi,
+            onPressed: () => Navigator.pop(context, _cats),
             style: ElevatedButton.styleFrom(
               backgroundColor: kBrown,
               padding: const EdgeInsets.symmetric(vertical: 15),
@@ -564,12 +632,10 @@ class _KategoriInputCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white, borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.black.withOpacity(0.05)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Row: icon + nama + mode toggle
         Row(children: [
           Container(width: 38, height: 38,
             decoration: BoxDecoration(color: k.bg, borderRadius: BorderRadius.circular(10)),
@@ -577,22 +643,13 @@ class _KategoriInputCard extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(child: Text(k.nama,
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218)))),
-          // Mode toggle
           _ModeToggle(current: mode, onToggle: onToggleMode),
         ]),
-
         const SizedBox(height: 10),
-
-        // Input
         if (mode == 'bebas')
           _NominalInput(ctrl: ctrlNominal, onChanged: onNominalChanged)
         else
-          _PersenInput(
-            ctrl: ctrlPersen,
-            income: income,
-            computed: k.limitAmount,
-            onChanged: onPersenChanged,
-          ),
+          _PersenInput(ctrl: ctrlPersen, income: income, computed: k.limitAmount, onChanged: onPersenChanged),
       ]),
     );
   }
@@ -606,13 +663,10 @@ class _ModeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F0EA),
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFF5F0EA), borderRadius: BorderRadius.circular(8)),
       padding: const EdgeInsets.all(2),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        _ModeBtn(label: 'Bebas', sel: current == 'bebas', onTap: () => onToggle('bebas')),
+        _ModeBtn(label: 'Bebas',    sel: current == 'bebas',  onTap: () => onToggle('bebas')),
         _ModeBtn(label: '% Income', sel: current == 'persen', onTap: () => onToggle('persen')),
       ]),
     );
@@ -637,10 +691,8 @@ class _ModeBtn extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(label,
-            style: TextStyle(
-              fontSize: 10, fontWeight: FontWeight.w600,
-              color: sel ? Colors.white : kBrownLight,
-            )),
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
+                color: sel ? Colors.white : kBrownLight)),
       ),
     );
   }
@@ -662,17 +714,13 @@ class _NominalInput extends StatelessWidget {
       decoration: InputDecoration(
         prefixText: 'Rp  ',
         prefixStyle: const TextStyle(fontSize: 13, color: kBrownLight),
-        hintText: '0',
-        hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFCCC0B4)),
+        hintText: '0', hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFCCC0B4)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        filled: true,
-        fillColor: const Color(0xFFF5F0EA),
+        filled: true, fillColor: const Color(0xFFF5F0EA),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: kBrown, width: 1.5),
-        ),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: kBrown, width: 1.5)),
       ),
     );
   }
@@ -683,10 +731,7 @@ class _PersenInput extends StatelessWidget {
   final int income;
   final int computed;
   final void Function(String) onChanged;
-  const _PersenInput({
-    required this.ctrl, required this.income,
-    required this.computed, required this.onChanged,
-  });
+  const _PersenInput({required this.ctrl, required this.income, required this.computed, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -700,39 +745,28 @@ class _PersenInput extends StatelessWidget {
             onChanged: onChanged,
             style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kBrown),
             decoration: InputDecoration(
-              suffixText: '%',
-              suffixStyle: const TextStyle(fontSize: 13, color: kBrownLight),
-              hintText: '0',
-              hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFCCC0B4)),
+              suffixText: '%', suffixStyle: const TextStyle(fontSize: 13, color: kBrownLight),
+              hintText: '0', hintStyle: const TextStyle(fontSize: 13, color: Color(0xFFCCC0B4)),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              filled: true,
-              fillColor: const Color(0xFFF5F0EA),
+              filled: true, fillColor: const Color(0xFFF5F0EA),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: kBrown, width: 1.5),
-              ),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: kBrown, width: 1.5)),
             ),
           ),
         ),
         const SizedBox(width: 10),
-        // Result preview
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF5F0EA),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            computed > 0 ? formatShort(computed) : '0',
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kBrown),
-          ),
+          decoration: BoxDecoration(color: const Color(0xFFF5F0EA), borderRadius: BorderRadius.circular(10)),
+          child: Text(computed > 0 ? formatShort(computed) : '0',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kBrown)),
         ),
       ]),
       const SizedBox(height: 6),
-      Text('Income: ${formatRp(income)}',
-          style: TextStyle(fontSize: 10, color: kBrownLight)),
+      Text(income > 0 ? 'Pemasukan: ${formatRp(income)}' : 'Belum ada pemasukan bulan ini',
+          style: const TextStyle(fontSize: 10, color: kBrownLight)),
     ]);
   }
 }
@@ -749,8 +783,7 @@ class _RencanaCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white, borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.black.withOpacity(0.05)),
       ),
       child: Row(children: [
@@ -759,10 +792,8 @@ class _RencanaCard extends StatelessWidget {
           child: Center(child: Text(k.icon, style: const TextStyle(fontSize: 18)))),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(k.nama,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218))),
-          const Text('Bulanan',
-              style: TextStyle(fontSize: 11, color: kBrownLight)),
+          Text(k.nama, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218))),
+          const Text('Bulanan', style: TextStyle(fontSize: 11, color: kBrownLight)),
         ])),
         Text(formatShort(k.limitAmount),
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kBrown)),
@@ -779,18 +810,17 @@ class _SisaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pctInt    = (k.pctUsed * 100).round();
-    final sisaInt   = k.sisa.clamp(0, k.limitAmount);
-    final barColor  = k.habis ? const Color(0xFFEF5350)
-                    : k.hampirHabis ? const Color(0xFFF57C00)
-                    : k.color;
+    final pctInt   = (k.pctUsed * 100).round();
+    final sisaInt  = k.sisa.clamp(0, k.limitAmount);
+    final barColor = k.habis ? const Color(0xFFEF5350)
+                   : k.hampirHabis ? const Color(0xFFF57C00)
+                   : k.color;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white, borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.black.withOpacity(0.05)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -800,59 +830,43 @@ class _SisaCard extends StatelessWidget {
             child: Center(child: Text(k.icon, style: const TextStyle(fontSize: 18)))),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(k.nama,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218))),
+            Text(k.nama, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF2D2218))),
             Text('Bulanan · ${formatRp(k.limitAmount)}',
                 style: const TextStyle(fontSize: 11, color: kBrownLight)),
           ])),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text('$pctInt%',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: barColor)),
-            Text('sisa ${formatShort(sisaInt)}',
-                style: const TextStyle(fontSize: 10, color: kBrownLight)),
+            Text('$pctInt%', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: barColor)),
+            Text('sisa ${formatShort(sisaInt)}', style: const TextStyle(fontSize: 10, color: kBrownLight)),
           ]),
         ]),
-
         const SizedBox(height: 10),
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
           child: LinearProgressIndicator(
-            value: k.pctUsed,
-            minHeight: 6,
+            value: k.pctUsed, minHeight: 6,
             backgroundColor: const Color(0xFFF0E9E2),
             valueColor: AlwaysStoppedAnimation<Color>(barColor),
           ),
         ),
-
         const SizedBox(height: 6),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('Terpakai: ${formatRp(k.terpakai)}',
-              style: const TextStyle(fontSize: 10, color: kBrownLight)),
-          Text('Sisa: ${formatRp(sisaInt)}',
-              style: const TextStyle(fontSize: 10, color: kBrownLight)),
+          Text('Terpakai: ${formatRp(k.terpakai)}', style: const TextStyle(fontSize: 10, color: kBrownLight)),
+          Text('Sisa: ${formatRp(sisaInt)}', style: const TextStyle(fontSize: 10, color: kBrownLight)),
         ]),
-
         if (k.hampirHabis)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
+          Padding(padding: const EdgeInsets.only(top: 6),
             child: Row(children: const [
               Icon(Icons.warning_amber_rounded, size: 13, color: Color(0xFFF57C00)),
               SizedBox(width: 4),
-              Text('Hampir habis!',
-                  style: TextStyle(fontSize: 11, color: Color(0xFFF57C00), fontWeight: FontWeight.w600)),
-            ]),
-          ),
-
+              Text('Hampir habis!', style: TextStyle(fontSize: 11, color: Color(0xFFF57C00), fontWeight: FontWeight.w600)),
+            ])),
         if (k.habis)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
+          Padding(padding: const EdgeInsets.only(top: 6),
             child: Row(children: const [
               Icon(Icons.cancel_rounded, size: 13, color: Color(0xFFEF5350)),
               SizedBox(width: 4),
-              Text('Budget habis!',
-                  style: TextStyle(fontSize: 11, color: Color(0xFFEF5350), fontWeight: FontWeight.w600)),
-            ]),
-          ),
+              Text('Budget habis!', style: TextStyle(fontSize: 11, color: Color(0xFFEF5350), fontWeight: FontWeight.w600)),
+            ])),
       ]),
     );
   }
@@ -863,22 +877,17 @@ class _SisaCard extends StatelessWidget {
 class _GaugeCard extends StatelessWidget {
   final int terpakai, sisa, total;
   final double pct;
-  const _GaugeCard({
-    required this.terpakai, required this.sisa,
-    required this.total, required this.pct,
-  });
+  const _GaugeCard({required this.terpakai, required this.sisa, required this.total, required this.pct});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white, borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12)],
       ),
       child: Column(children: [
-        // Gauge
         SizedBox(
           height: 120,
           child: CustomPaint(
@@ -895,10 +904,7 @@ class _GaugeCard extends StatelessWidget {
             ),
           ),
         ),
-
         const SizedBox(height: 16),
-
-        // Stats row
         Row(children: [
           Expanded(child: _StatItem(label: 'Terpakai', value: formatShort(terpakai), color: kKeluar)),
           Container(width: 1, height: 32, color: const Color(0xFFF0E9E2)),
@@ -932,44 +938,27 @@ class _GaugePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final cx     = size.width / 2;
-    final cy     = size.height * 1.1;
+    final cx = size.width / 2, cy = size.height * 1.1;
     final radius = size.width * 0.42;
     const stroke = 16.0;
-    const startA = math.pi;
-    const sweepA = math.pi;
 
-    // Background arc
-    canvas.drawArc(
-      Rect.fromCircle(center: Offset(cx, cy), radius: radius),
-      startA, sweepA, false,
-      Paint()
-        ..color = const Color(0xFFF0E9E2)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.round,
-    );
+    canvas.drawArc(Rect.fromCircle(center: Offset(cx, cy), radius: radius),
+        math.pi, math.pi, false,
+        Paint()..color = const Color(0xFFF0E9E2)..style = PaintingStyle.stroke
+               ..strokeWidth = stroke..strokeCap = StrokeCap.round);
 
-    // Filled arc
     final fillColor = pct > 0.9 ? const Color(0xFFEF5350)
                     : pct > 0.7 ? const Color(0xFFF57C00)
                     : kKeluar;
-    canvas.drawArc(
-      Rect.fromCircle(center: Offset(cx, cy), radius: radius),
-      startA, sweepA * pct.clamp(0, 1), false,
-      Paint()
-        ..color = fillColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.round,
-    );
+    canvas.drawArc(Rect.fromCircle(center: Offset(cx, cy), radius: radius),
+        math.pi, math.pi * pct.clamp(0, 1), false,
+        Paint()..color = fillColor..style = PaintingStyle.stroke
+               ..strokeWidth = stroke..strokeCap = StrokeCap.round);
   }
 
   @override
   bool shouldRepaint(_) => true;
 }
-
-// ── DONUT PAINTER ─────────────────────────────────────────────────────────────
 
 class _DonutPainter extends CustomPainter {
   final List<BudgetKategori> cats;
@@ -982,18 +971,12 @@ class _DonutPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 8;
     double startAngle = -math.pi / 2;
-
     for (final k in cats) {
       final sweep = 2 * math.pi * k.limitAmount / total;
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle, sweep - 0.04, false,
-        Paint()
-          ..color = k.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 13
-          ..strokeCap = StrokeCap.butt,
-      );
+      canvas.drawArc(Rect.fromCircle(center: center, radius: radius),
+          startAngle, sweep - 0.04, false,
+          Paint()..color = k.color..style = PaintingStyle.stroke
+                 ..strokeWidth = 13..strokeCap = StrokeCap.butt);
       startAngle += sweep;
     }
   }

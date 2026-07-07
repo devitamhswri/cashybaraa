@@ -17,12 +17,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String _tipe = 'pengeluaran';
   DateTime _tanggal = DateTime.now();
   String? _kategoriNama;
-  String? _kategoriId;   // ← kirim ke Firebase
+  String? _kategoriId;
   String? _akun;
-  final _namaController = TextEditingController();
-  final _biayaController = TextEditingController();
-  final _notesController = TextEditingController();
+  final _namaController    = TextEditingController(); // pengeluaran saja
+  final _biayaController   = TextEditingController();
+  final _notesController   = TextEditingController();
   bool _isSaving = false;
+
+  bool get _isPemasukan => _tipe == 'pemasukan';
 
   @override
   void dispose() {
@@ -55,7 +57,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Future<void> _simpan() async {
-    if (_namaController.text.trim().isEmpty) {
+    // Untuk pengeluaran, nama wajib diisi
+    if (!_isPemasukan && _namaController.text.trim().isEmpty) {
       _showSnack('Nama transaksi tidak boleh kosong'); return;
     }
     if (_kategoriId == null) {
@@ -68,24 +71,29 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _biayaController.text.replaceAll('.', '').replaceAll(',', '.'),
     );
     if (biaya == null || biaya <= 0) {
-      _showSnack('Masukkan biaya yang valid'); return;
+      _showSnack(_isPemasukan ? 'Masukkan pendapatan yang valid' : 'Masukkan biaya yang valid');
+      return;
     }
 
     setState(() => _isSaving = true);
 
     final appState = context.read<AppState>();
 
+    // Untuk pemasukan, title otomatis pakai nama kategori
+    final title = _isPemasukan
+        ? _kategoriNama!
+        : _namaController.text.trim();
+
     await context.read<TransactionProvider>().addTransactionFull(
-      title: _namaController.text.trim(),
+      title: title,
       amount: biaya,
       tipe: _tipe,
       kategori: _kategoriNama!,
-      categoryId: _kategoriId!,   // ← penting untuk Firebase
+      categoryId: _kategoriId!,
       akun: _akun!,
       tanggal: _tanggal,
       notes: _notesController.text.trim(),
       onSuccess: () {
-        // Refresh AppState supaya home screen ikut update
         appState.loadData();
       },
     );
@@ -99,12 +107,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
+  // Saat ganti tipe, reset kategori karena list-nya berbeda
+  void _setTipe(String tipe) {
+    setState(() {
+      _tipe = tipe;
+      _kategoriId   = null;
+      _kategoriNama = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
 
-    // Pakai objek lengkap supaya bisa ambil id
-    final kategoriList = state.categories;
+    // Pakai income/expense categories sesuai tipe
+    final kategoriList = _isPemasukan
+        ? state.incomeCategories
+        : state.categories; // categories = expenseCategories
+
     final akunList = state.akunList.map((a) => a.nama).toList();
 
     return Scaffold(
@@ -166,7 +186,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 12),
 
-            // KATEGORI — pakai id bukan hanya nama
+            // KATEGORI
             _buildCard(
               child: _buildRow(
                 icon: Icons.grid_view_rounded,
@@ -197,7 +217,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             _buildCard(
               child: _buildRow(
                 icon: Icons.account_balance_wallet_outlined,
-                label: _tipe == 'pengeluaran' ? 'Dari Akun' : 'Ke Akun',
+                label: _isPemasukan ? 'Ke Akun' : 'Dari Akun',
                 child: DropdownButton<String>(
                   value: _akun,
                   hint: const Text('Pilih akun',
@@ -213,32 +233,34 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 12),
 
-            // NAMA
-            _buildCard(
-              child: _buildRow(
-                icon: Icons.edit_outlined,
-                label: 'Nama',
-                child: Expanded(
-                  child: TextField(
-                    controller: _namaController,
-                    style: const TextStyle(fontSize: 13),
-                    decoration: const InputDecoration(
-                      hintText: 'cth: Makan siang',
-                      hintStyle: TextStyle(fontSize: 13, color: Color(0xFFBDB0A6)),
-                      border: InputBorder.none, isDense: true,
-                      contentPadding: EdgeInsets.zero,
+            // NAMA — hanya tampil untuk pengeluaran
+            if (!_isPemasukan) ...[
+              _buildCard(
+                child: _buildRow(
+                  icon: Icons.edit_outlined,
+                  label: 'Nama',
+                  child: Expanded(
+                    child: TextField(
+                      controller: _namaController,
+                      style: const TextStyle(fontSize: 13),
+                      decoration: const InputDecoration(
+                        hintText: 'cth: Makan siang',
+                        hintStyle: TextStyle(fontSize: 13, color: Color(0xFFBDB0A6)),
+                        border: InputBorder.none, isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
+              const SizedBox(height: 12),
+            ],
 
-            // BIAYA
+            // BIAYA (pengeluaran) / PENDAPATAN (pemasukan)
             _buildCard(
               child: _buildRow(
                 icon: Icons.payments_outlined,
-                label: 'Biaya',
+                label: _isPemasukan ? 'Pendapatan' : 'Biaya',
                 child: Expanded(
                   child: TextField(
                     controller: _biayaController,
@@ -300,8 +322,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     ? const SizedBox(
                         width: 20, height: 20,
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text('Simpan Transaksi',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                    : Text(
+                        _isPemasukan ? 'Simpan Pemasukan' : 'Simpan Pengeluaran',
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
               ),
             ),
             const SizedBox(height: 24),
@@ -314,7 +338,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Widget _tipeButton(String value, String label, Color color) {
     final isSelected = _tipe == value;
     return GestureDetector(
-      onTap: () => setState(() => _tipe = value),
+      onTap: () => _setTipe(value),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
